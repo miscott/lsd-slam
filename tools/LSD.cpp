@@ -75,7 +75,7 @@ int main( int argc, char** argv )
   startAll.notify();
 
   // This is idle while(1) loop
-  while( !input.inputDone.getValue() )
+  while( !input.inputDone() )
   { sleep(1); }
 
   LOG(INFO) << "Finalizing system.";

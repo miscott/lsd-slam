@@ -26,7 +26,7 @@ namespace lsd_slam {
       std::shared_ptr<lsd_slam::DataSource> dataSource;
       std::shared_ptr<lsd_slam::Undistorter> undistorter;
 
-      ThreadMutexObject<bool> inputDone;
+      MutexObject<bool> inputDone;
       ThreadSynchronizer inputReady;
 
 protected:

@@ -55,14 +55,14 @@ public:
 	void reset();
 
 	/**
+	 * does propagation and whole-filling-regularization (no observation, for that need to call updateKeyframe()!)
+	 **/
+	void createKeyFrame( const Frame::SharedPtr &new_keyframe );
+
+	/**
 	 * does obervation and regularization only.
 	 **/
 	void updateKeyframe(std::deque< std::shared_ptr<Frame> > referenceFrames);
-
-	/**
-	 * does propagation and whole-filling-regularization (no observation, for that need to call updateKeyframe()!)
-	 **/
-	void createKeyFrame( const Frame::SharedPtr &new_keyframe);
 
 	/**
 	 * does one fill holes iteration
@@ -107,7 +107,7 @@ public:
 	IndexThreadReduce threadReducer;
 
 private:
-	
+
 	const Configuration &_conf;
 
 	// ============= parameter copies for convenience ===========================

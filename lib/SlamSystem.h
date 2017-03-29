@@ -107,6 +107,8 @@ public:
 	void loadNewCurrentKeyframe( const Frame::SharedPtr &keyframeToLoad );
 	void createNewCurrentKeyframe( const Frame::SharedPtr &newKeyframeCandidate );
 
+	void storePose( const Frame::SharedPtr &frame );
+
 	// void requestDepthMapScreenshot(const std::string& filename);
 
 	// int findConstraintsForNewKeyFrames(Frame* newKeyFrame, bool forceParent=true, bool useFABMAP=true, float closeCandidatesTH=1.0);
@@ -148,165 +150,57 @@ public:
 	boost::shared_mutex poseConsistencyMutex;
 
 
-	const shared_ptr<KeyFrameGraph> &keyFrameGraph() { return _keyFrameGraph; };	  // has own locks
+	shared_ptr<KeyFrameGraph> &keyFrameGraph() { return _keyFrameGraph; };	  // has own locks
 	shared_ptr<TrackableKeyFrameSearch> &trackableKeyFrameSearch() { return _trackableKeyFrameSearch; }
 
+	// TODO.   Move back to private
+	// contains ALL keyframes, as soon as they are "finished".
+	// does NOT yet contain the keyframe that is currently being created.
+	//boost::shared_mutex keyframesAllMutex;
+	typedef MutexObject< std::vector< Frame::SharedPtr > > KeyframesAll;
+	MutexObject< std::vector< Frame::SharedPtr > > keyframesAll;
+
+	// contains ALL frame poses, chronologically, as soon as they are tracked.
+	// the corresponding frame may have been removed / deleted in the meantime.
+	// these are the ones that are also referenced by the corresponding Frame / Keyframe object
+	//boost::shared_mutex allFramePosesMutex;
+	typedef MutexObject< std::vector< FramePoseStruct::SharedPtr> > AllFramePoses;
+	AllFramePoses allFramePoses;
+
+	/** Maps frame ids to keyframes. Contains ALL Keyframes allocated, including the one that currently being created. */
+	/* this is where the shared pointers of Keyframe Frames are kept, so they are not deleted ever */
+	//boost::shared_mutex idToKeyFrameMutex;
+	typedef MutexObject< std::unordered_map< int, Frame::SharedPtr > > IdToKeyFrame;
+	MutexObject< std::unordered_map< int, Frame::SharedPtr > > idToKeyFrame;
 
 private:
 
+	//===== Shared state =====
+
 	const Configuration &_conf;
 
-	// Individual / no locking
+	std::shared_ptr<KeyFrameGraph> _keyFrameGraph;	  // has own locks
+
+
+	MutexObject< Frame::SharedPtr >  _currentKeyFrame;
+
+	TrackingReference* mappingTrackingReference;
+
+	std::shared_ptr<TrackableKeyFrameSearch> _trackableKeyFrameSearch;
+
 	shared_ptr<Output3DWrapper> _outputWrapper;	// no lock required
 
 	ThreadSynchronizer _finalized;
 
+
 	bool _initialized;
 	bool initialized( void ) const { return _initialized; }
 	bool setInitialized( bool i ) { _initialized = i; return _initialized; }
-
 	void initialize( const Frame::SharedPtr &frame );
 
 	// ======= Functions =====
 
 	void addTimingSamples();
-
-	// == Shared data
-
-	std::shared_ptr<KeyFrameGraph> _keyFrameGraph;	  // has own locks
-	MutexObject< Frame::SharedPtr >  _currentKeyFrame;
-
-
-	std::shared_ptr<TrackableKeyFrameSearch> _trackableKeyFrameSearch;
-
-
-
-	// ============= EXCLUSIVELY TRACKING THREAD (+ init) ===============
-	// TrackingReference* trackingReference; // tracking reference for current keyframe. only used by tracking.
-	// SE3Tracker* tracker;
-
-
-
-	// ============= EXCLUSIVELY MAPPING THREAD (+ init) =============
-
-
-
-	// ============= EXCLUSIVELY FIND-CONSTRAINT THREAD (+ init) =============
-
-
-	//
-	//
-	// // ============= SHARED ENTITIES =============
-	// float tracking_lastResidual;
-	// float tracking_lastUsage;
-	// float tracking_lastGoodPerBad;
-	// float tracking_lastGoodPerTotal;
-	//
-	// int lastNumConstraintsAddedOnFullRetrack;
-	// bool doFinalOptimization;
-	// float lastTrackingClosenessScore;
-	//
-	// // for sequential operation. Set in Mapping, read in Tracking.
-	// // std::condition_variable  newFrameMappedSignal;
-	// // std::mutex newFrameMappedMutex;
-	//
-	//
-	//
-	// // USED DURING RE-LOCALIZATION ONLY
-	// Relocalizer relocalizer;
-	//
-	//
-	//
-	//
-	//
-	// // Tracking: if (!create) set candidate, set create.
-	// // Mapping: if (create) use candidate, reset create.
-	// // => no locking required.
-	// std::shared_ptr<Frame> latestTrackedFrame;
-	// bool createNewKeyFrame;
-	//
-	//
-	//
-	// // PUSHED in tracking, READ & CLEARED in mapping
-	// // std::deque< std::shared_ptr<Frame> > unmappedTrackedFrames;
-	// // ThreadSynchronizer unmappedTrackedFramesSynchro;
-	// // std::mutex unmappedTrackedFramesMutex;
-	// // std::condition_variable  unmappedTrackedFramesSignal;
-	//
-	//
-	// // PUSHED by Mapping, READ & CLEARED by constraintFinder
-	// ThreadMutexObject< std::deque< Frame* > > newKeyFrames;
-	// // std::deque< Frame* > newKeyFrames;
-	// // std::mutex newKeyFrameMutex;
-	// // std::condition_variable newKeyFrameCreatedSignal;
-	//
-	//
-	//
-	//
-	// // threads
-	// // std::thread thread_mapping;
-	// // std::thread thread_constraint_search;
-	// //std::thread thread_optimization;
-	//
-	// // bool keepRunning; // used only on destruction to signal threads to finish.
-	//
-	//
-	//
-	// // optimization thread
-	// // bool newConstraintAdded;
-	// // std::mutex newConstraintMutex;
-	// // std::condition_variable newConstraintCreatedSignal;
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	// bool depthMapScreenshotFlag;
-	// std::string depthMapScreenshotFilename;
-	//
-	// const Configuration &_conf;
-	//
-	//
-	// /** Merges the current keyframe optimization offset to all working entities. */
-	// void mergeOptimizationOffset();
-	//
-	//
-	// // void mappingThreadLoop();
-	//
-	// void finishCurrentKeyframe();
-	// void discardCurrentKeyframe();
-	//
-	// void changeKeyframe(bool noCreate, bool force, float maxScore);
-	// void createNewCurrentKeyframe(std::shared_ptr<Frame> newKeyframeCandidate);
-	// void loadNewCurrentKeyframe(Frame* keyframeToLoad);
-	//
-	//
-	// bool updateKeyframe();
-	//
-	//
-	// void debugDisplayDepthMap();
-	//
-	// void takeRelocalizeResult();
-	//
-	// void constraintSearchThreadLoop();
-	// /** Calculates a scale independent error norm for reciprocal tracking results a and b with associated information matrices. */
-	// float tryTrackSim3(
-	// 		TrackingReference* A, TrackingReference* B,
-	// 		int lvlStart, int lvlEnd,
-	// 		bool useSSE,
-	// 		Sim3 &AtoB, Sim3 &BtoA,
-	// 		KFConstraintStruct* e1=0, KFConstraintStruct* e2=0);
-	//
-	// void testConstraint(
-	// 		Frame* candidate,
-	// 		KFConstraintStruct* &e1_out, KFConstraintStruct* &e2_out,
-	// 		Sim3 candidateToFrame_initialEstimate,
-	// 		float strictness);
-	//
-	// //void optimizationThreadLoop();
 
 
 

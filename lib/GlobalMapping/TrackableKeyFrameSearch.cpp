@@ -25,12 +25,15 @@
 #include "DataStructures/Frame.h"
 #include "Tracking/SE3Tracker.h"
 
+#include "SlamSystem.h"
+
 namespace lsd_slam
 {
 
 
-TrackableKeyFrameSearch::TrackableKeyFrameSearch( const std::shared_ptr<KeyFrameGraph> &graph, const Configuration &conf )
-: graph(graph),
+TrackableKeyFrameSearch::TrackableKeyFrameSearch( SlamSystem &system, const std::shared_ptr<KeyFrameGraph> &graph, const Configuration &conf )
+: _system(system),
+	graph(graph),
 	tracker( new SE3Tracker( conf.slamImage ) )
 {
 	fowX = 2 * atanf(float(conf.slamImage.width) * conf.camera.fxi / 2.0f );
@@ -54,7 +57,6 @@ std::vector<TrackableKFStruct> TrackableKeyFrameSearch::findEuclideanOverlapFram
 	// e.g. if the FoV is 130°, then it is angleTH*130°.
 	float cosAngleTH = cosf(angleTH*0.5f*(fowX + fowY));
 
-
 	Eigen::Vector3d pos = frame->getCamToWorld().translation();
 	Eigen::Vector3d viewingDir = frame->getCamToWorld().rotationMatrix().rightCols<1>();
 
@@ -65,29 +67,30 @@ std::vector<TrackableKFStruct> TrackableKeyFrameSearch::findEuclideanOverlapFram
 		distFacReciprocal = frame->meanIdepth / frame->getCamToWorld().scale();
 
 	// for each frame, calculate the rough score, consisting of pose, scale and angle overlap.
-	graph->keyframesAllMutex.lock_shared();
-	for(unsigned int i=0;i<graph->keyframesAll.size();i++)
 	{
-		Eigen::Vector3d otherPos = graph->keyframesAll[i]->getCamToWorld().translation();
+		SlamSystem::KeyframesAll::LockGuard lock( _system.keyframesAll.mutex() );
+	for(unsigned int i=0;i<_system.keyframesAll.const_ref().size();i++)
+	{
+		Eigen::Vector3d otherPos = _system.keyframesAll.const_ref()[i]->getCamToWorld().translation();
 
 		// get distance between the frames, scaled to fit the potential reference frame.
-		float distFac = graph->keyframesAll[i]->meanIdepth / graph->keyframesAll[i]->getCamToWorld().scale();
+		float distFac = _system.keyframesAll.const_ref()[i]->meanIdepth / _system.keyframesAll.const_ref()[i]->getCamToWorld().scale();
 		if(checkBothScales && distFacReciprocal < distFac) distFac = distFacReciprocal;
 		Eigen::Vector3d dist = (pos - otherPos) * distFac;
 		float dNorm2 = dist.dot(dist);
 		if(dNorm2 > distanceTH) continue;
 
-		Eigen::Vector3d otherViewingDir = graph->keyframesAll[i]->getCamToWorld().rotationMatrix().rightCols<1>();
+		Eigen::Vector3d otherViewingDir = _system.keyframesAll.const_ref()[i]->getCamToWorld().rotationMatrix().rightCols<1>();
 		float dirDotProd = otherViewingDir.dot(viewingDir);
 		if(dirDotProd < cosAngleTH) continue;
 
 		potentialReferenceFrames.push_back(TrackableKFStruct());
-		potentialReferenceFrames.back().ref = graph->keyframesAll[i];
-		potentialReferenceFrames.back().refToFrame = se3FromSim3(graph->keyframesAll[i]->getCamToWorld().inverse() * frame->getCamToWorld()).inverse();
+		potentialReferenceFrames.back().ref = _system.keyframesAll.const_ref()[i];
+		potentialReferenceFrames.back().refToFrame = se3FromSim3(_system.keyframesAll.const_ref()[i]->getCamToWorld().inverse() * frame->getCamToWorld()).inverse();
 		potentialReferenceFrames.back().dist = dNorm2;
 		potentialReferenceFrames.back().angle = dirDotProd;
 	}
-	graph->keyframesAllMutex.unlock_shared();
+}
 
 	return potentialReferenceFrames;
 }

@@ -55,7 +55,7 @@ class GUI
         // The master roll-up of all of the updating
         void update( void );
 
-        ThreadMutexObject<Sophus::Sim3f> pose;
+        MutexObject<Sophus::Sim3f> pose;
 
     private:
         const lsd_slam::Configuration &_conf;
@@ -65,8 +65,11 @@ class GUI
         pangolin::GlTexture *liveImg;
         pangolin::GlTexture *depthImg;
 
-        ThreadMutexObject<unsigned char * > liveImgBuffer;
-        ThreadMutexObject<unsigned char * > depthImgBuffer;
+        std::shared_ptr<unsigned char> liveImgBuffer;
+        std::mutex liveImgMutex;
+
+        std::shared_ptr<unsigned char> depthImgBuffer;
+        std::mutex depthImgMutex;
 
         pangolin::Var<int> * gpuMem;
         pangolin::Var<int> * frameNumber;
@@ -75,7 +78,7 @@ class GUI
 
         pangolin::OpenGlRenderState s_cam;
 
-        ThreadMutexObject<std::map<int, Keyframe *> > keyframes;
+        MutexObject<std::map<int, Keyframe *> > keyframes;
 };
 
 

@@ -42,6 +42,8 @@ namespace lsd_slam
 class KeyFrameGraph;
 class SE3Tracker;
 
+class SlamSystem;
+
 
 struct TrackableKFStruct
 {
@@ -58,9 +60,11 @@ struct TrackableKFStruct
  */
 class TrackableKeyFrameSearch
 {
+	friend class SlamSystem;
+	
 public:
 	/** Constructor. */
-	TrackableKeyFrameSearch( const std::shared_ptr<KeyFrameGraph> &graph, const Configuration &conf );
+	TrackableKeyFrameSearch( SlamSystem &system, const std::shared_ptr<KeyFrameGraph> &graph, const Configuration &conf );
 	~TrackableKeyFrameSearch();
 
 	/**
@@ -81,6 +85,8 @@ public:
 
 
 private:
+
+	 SlamSystem &_system;
 	/**
 	 * Returns a possible loop closure for the keyframe or nullptr if none is found.
 	 * Uses FabMap internally.

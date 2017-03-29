@@ -41,8 +41,6 @@ namespace lsd_slam {
 
       for(unsigned int i = 0; (numFrames < 0) || (i < numFrames); ++i)
       {
-        if(inputDone.getValue()) break;
-
         std::chrono::time_point<std::chrono::steady_clock> start(std::chrono::steady_clock::now());
 
         if( dataSource->grab() ) {
@@ -81,7 +79,7 @@ namespace lsd_slam {
       }
 
       LOG(INFO) << "Have processed all input frames.";
-      inputDone.assignValue(true);
+      inputDone = true;
     }
 
   }

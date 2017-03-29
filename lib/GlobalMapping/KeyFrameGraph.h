@@ -37,6 +37,8 @@
 namespace lsd_slam
 {
 
+class SlamSystem;
+
 
 class KeyFrameGraph;
 class VertexSim3;
@@ -80,10 +82,6 @@ struct KFConstraintStruct
 };
 
 
-
-
-
-
 /**
  * Graph consisting of KeyFrames and constraints, performing optimization.
  */
@@ -92,7 +90,7 @@ class KeyFrameGraph
 friend class IntegrationTest;
 public:
 	/** Constructs an empty pose graph. */
-	KeyFrameGraph();
+	KeyFrameGraph( SlamSystem &system );
 
 	/** Deletes the g2o graph. */
 	~KeyFrameGraph();
@@ -101,7 +99,7 @@ public:
 	void addKeyFrame( const Frame::SharedPtr &frame);
 
 	/** Adds a new Frame to the graph. Doesnt actually keep the frame, but only it's pose-struct. */
-	void addFrame(const Frame::SharedPtr &frame);
+	//void addFrame(const Frame::SharedPtr &frame);
 
 	void dumpMap(std::string folder);
 
@@ -116,7 +114,7 @@ public:
 	 */
 	void insertConstraint(KFConstraintStruct* constraint);
 
-	int size() const { return keyframesAll.size(); }
+	//int size() const { return keyframesAll.size(); }
 
 	/** Optimizes the graph. Does not update the keyframe poses,
 	 *  only the vertex poses. You must call updateKeyFramePoses() afterwards. */
@@ -139,30 +137,10 @@ public:
 	// Always lock the list with the corresponding mutex!
 	// central point to administer keyframes, iterate over keyframes, do lookups etc.
 
-
-	// contains ALL keyframes, as soon as they are "finished".
-	// does NOT yet contain the keyframe that is currently being created.
-	boost::shared_mutex keyframesAllMutex;
-	std::vector< Frame::SharedPtr > keyframesAll;
-
-
-	/** Maps frame ids to keyframes. Contains ALL Keyframes allocated, including the one that currently being created. */
-	/* this is where the shared pointers of Keyframe Frames are kept, so they are not deleted ever */
-	boost::shared_mutex idToKeyFrameMutex;
-	std::unordered_map< int, Frame::SharedPtr > idToKeyFrame;
-
-
 	// contains ALL edges, as soon as they are created
 	boost::shared_mutex edgesListsMutex;
 	std::vector< KFConstraintStruct* > edgesAll;
 
-
-
-	// contains ALL frame poses, chronologically, as soon as they are tracked.
-	// the corresponding frame may have been removed / deleted in the meantime.
-	// these are the ones that are also referenced by the corresponding Frame / Keyframe object
-	boost::shared_mutex allFramePosesMutex;
-	std::vector< FramePoseStruct::SharedPtr  > allFramePoses;
 
 
 	// contains all keyframes in graph, in some arbitrary (random) order. if a frame is re-tracked,
@@ -173,10 +151,12 @@ public:
 
 	// Used to live with the optimizer, but not needed as signal anymore,
 	// now just used as a simple data mutex.
-	std::mutex newKeyFrameMutex;
+	//std::mutex newKeyFrameMutex;
 
 
 private:
+
+	SlamSystem &_system;
 
 	/** Pose graph representation in g2o */
 	g2o::SparseOptimizer graph;

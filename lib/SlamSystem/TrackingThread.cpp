@@ -136,7 +136,7 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 	{
 		// Prod mapping to check the relocalizer
 		_system.mapThread->relocalizer.updateCurrentFrame(newFrame);
-		_system.mapThread->doIteration();
+		//_system.mapThread->doIteration();
 
 //		unmappedTrackedFrames.notifyAll();
 
@@ -149,7 +149,7 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 
 	// Are the following two calls atomic enough or should I lock
 	// before the next two lines?
-	bool newKeyFramePending = _system.mapThread->newKeyFramePending();	// pre-save here, to make decision afterwards.
+	//bool newKeyFramePending = _system.mapThread->newKeyFramePending();	// pre-save here, to make decision afterwards.
 	Frame::SharedPtr keyframe( _system.currentKeyFrame().get() );
 
 	if(_trackingReference->frameID != keyframe->id() || keyframe->depthHasBeenUpdatedFlag )
@@ -169,7 +169,7 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 	SE3 frameToReference_initialEstimate;
 	{
 		boost::shared_lock_guard<boost::shared_mutex> lock( _system.poseConsistencyMutex );
-		frameToReference_initialEstimate = se3FromSim3( trackingReferencePose.getCamToWorld().inverse() * _system.keyFrameGraph()->allFramePoses.back()->getCamToWorld());
+		frameToReference_initialEstimate = se3FromSim3( trackingReferencePose.getCamToWorld().inverse() * _system.allFramePoses.const_ref().back()->getCamToWorld());
 	}
 
 
@@ -189,7 +189,8 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 
 
 	if(manualTrackingLossIndicated || _tracker->diverged ||
-		(_system.keyFrameGraph()->keyframesAll.size() > INITIALIZATION_PHASE_COUNT && !_tracker->trackingWasGood))
+		(_system.keyframesAll.const_ref().size() > INITIALIZATION_PHASE_COUNT &&
+		 !_tracker->trackingWasGood))
 	{
 		LOGF(WARNING, "TRACKING LOST for frame %d (%1.2f%% good Points, which is %1.2f%% of available points; %s tracking; tracker has %s)!\n",
 				newFrame->id(),
@@ -204,7 +205,7 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 		//nextRelocIdx = -1;  // What does this do?
 
 		// Kick over the mapping thread
-		_system.mapThread->doIteration();
+		//_system.mapThread->doIteration();
 		// unmappedTrackedFrames.notifyAll();
 
 		// unmappedTrackedFramesMutex.lock();
@@ -232,8 +233,8 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 	// 	outputWrapper->publishDebugInfo(data);
 	// }
 
-	_system.keyFrameGraph()->addFrame(newFrame);
 
+		_system.storePose(newFrame);
 
 	//Sim3 lastTrackedCamToWorld = mostCurrentTrackedFrame->getCamToWorld();
 //  mostCurrentTrackedFrame->TrackingParent->getCamToWorld() * sim3FromSE3(mostCurrentTrackedFrame->thisToParent_SE3TrackingResult, 1.0);
@@ -248,19 +249,23 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 	LOG(INFO) << "While tracking " << newFrame->id() << " the keyframe is " << _system.currentKeyFrame().const_ref()->id();
 	LOG_IF( INFO, printThreadingInfo ) << _system.currentKeyFrame().const_ref()->numMappedOnThisTotal << " frames mapped on to keyframe " << _system.currentKeyFrame().const_ref()->id() << ", considering " << newFrame->id() << " as new keyframe.";
 
-	if(!newKeyFramePending && _system.currentKeyFrame().const_ref()->numMappedOnThisTotal > MIN_NUM_MAPPED)
+	bool nominateNewKeyframe = false;
+//	if(!newKeyFramePending && _system.currentKeyFrame().const_ref()->numMappedOnThisTotal > MIN_NUM_MAPPED)
+
+	if( _system.currentKeyFrame().const_ref()->numMappedOnThisTotal > MIN_NUM_MAPPED)
 	{
 		Sophus::Vector3d dist = newRefToFrame_poseUpdate.translation() * _system.currentKeyFrame().const_ref()->meanIdepth;
-		float minVal = fmin(0.2f + _system.keyFrameGraph()->size() * 0.8f / INITIALIZATION_PHASE_COUNT,1.0f);
+		float minVal = fmin(0.2f + _system.keyframesAll.const_ref().size() * 0.8f / INITIALIZATION_PHASE_COUNT,1.0f);
 
-		if(_system.keyFrameGraph()->size() < INITIALIZATION_PHASE_COUNT)	minVal *= 0.7;
+		if(_system.keyframesAll.const_ref().size() < INITIALIZATION_PHASE_COUNT)	minVal *= 0.7;
 
 		lastTrackingClosenessScore = _system.trackableKeyFrameSearch()->getRefFrameScore(dist.dot(dist), _tracker->pointUsage);
 
 		if (lastTrackingClosenessScore > minVal)
 		{
 			LOG(INFO) << "Telling mapping thread to make " << newFrame->id() << " the new keyframe.";
-			_system.mapThread->createNewKeyFrame( newFrame );
+			//_system.mapThread->createNewKeyFrame( newFrame );
+			nominateNewKeyframe = true;
 			// createNewKeyFrame = true;
 
 			LOGF_IF( INFO, printKeyframeSelectionInfo,
@@ -275,18 +280,18 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 	}
 
 	LOG_IF( DEBUG, printThreadingInfo ) << "Push unmapped tracked frame.";
-	_system.mapThread->pushUnmappedTrackedFrame( newFrame );
+	_system.mapThread->mapTrackedFrame( newFrame, blockUntilMapped, nominateNewKeyframe );
 
 	// unmappedTrackedFrames.notifyAll();
 		// unmappedTrackedFramesSignal.notify_one();
 	// }
 
 	// If blocking is requested...
-	if(blockUntilMapped && trackingIsGood() ){
-		while( _system.mapThread->unmappedTrackedFrames.size() > 0 ) {
-			_system.mapThread->trackedFramesMapped.wait( );
-		}
-	}
+	// if(blockUntilMapped && trackingIsGood() ){
+	// 	while( _system.mapThread->unmappedTrackedFrames.size() > 0 ) {
+	// 		_system.mapThread->trackedFramesMapped.wait( );
+	// 	}
+	// }
 
 	LOG_IF( DEBUG, printThreadingInfo ) << "Exiting trackFrame";
 
@@ -324,9 +329,9 @@ void TrackingThread::takeRelocalizeResult( const RelocalizerResult &result  )
 	}
 	else
 	{
-		_system.keyFrameGraph()->addFrame(result.successfulFrame );
+		_system.storePose(result.successfulFrame );
 
-		_system.mapThread->pushUnmappedTrackedFrame( result.successfulFrame );
+		_system.mapThread->mapTrackedFrame( result.successfulFrame, true );
 
 		// {
 		// 	std::lock_guard<std::mutex> lock( currentKeyFrameMutex );

@@ -5,7 +5,7 @@
 
 using namespace lsd_slam;
 
-ThreadMutexObject<bool> guiDone(false);
+MutexObject<bool> guiDone;
 ThreadSynchronizer guiReady;
 
 void runGuiThread(const std::shared_ptr<GUI> &gui )
@@ -15,7 +15,7 @@ void runGuiThread(const std::shared_ptr<GUI> &gui )
 
 	while(!pangolin::ShouldQuit())
 	{
-		if(guiDone.getValue()) break;
+		if(guiDone()) break;
 
 		LOG(INFO) << "runGuiThread";
 
@@ -29,6 +29,6 @@ void runGuiThread(const std::shared_ptr<GUI> &gui )
 		gui->postCall();
 	}
 
-	guiDone.assignValue(true);
+	guiDone = true;
 
 }

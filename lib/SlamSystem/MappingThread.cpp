@@ -17,21 +17,17 @@
 
 namespace lsd_slam {
 
-using active_object::ActiveIdle;
+using active_object::Active;
 
 // static const bool depthMapScreenshotFlag = true;
 
 
 MappingThread::MappingThread( SlamSystem &system )
 	: _system(system ),
-		_newKeyFrame( nullptr ),
 		relocalizer( system.conf() ),
 		map( new DepthMap( system.conf() ) ),
-		unmappedTrackedFrames(),
-		unmappedTrackedFramesMutex(),
-		trackedFramesMapped(),
-		mappingTrackingReference( new TrackingReference() ),
-		_thread( ActiveIdle::createActiveIdle( std::bind( &MappingThread::callbackIdle, this ), std::chrono::milliseconds(200)) )
+		trackedFramesMappedSync(),
+		_thread( Active::createActive() )
 {
 	LOG(INFO) << "Started Mapping thread";
 }
@@ -40,11 +36,11 @@ MappingThread::~MappingThread()
 {
 	if( _thread ) delete _thread.release();
 
-	delete mappingTrackingReference;
+	//delete mappingTrackingReference;
 	delete map;
 
 	// make sure to reset all shared pointers to all frames before deleting the keyframegraph!
-	unmappedTrackedFrames.clear();
+	//unmappedTrackedFrames.clear();
 
 	// latestFrameTriedForReloc.reset();
 	// latestTrackedFrame.reset();
@@ -55,35 +51,162 @@ MappingThread::~MappingThread()
 	//LOG(INFO) << "Exited Mapping thread";
 }
 
+// void MappingThread::finishCurrentKeyFrame( bool block = false )
+// {
+// 	if( _thread ) {
+// 	_thread->send( std::bind( &MappingThread::callbackFinishCurrentKeyframe, this ));
+//
+// 	if( block ) finishCurrentKeyframeSync.wait();
+//
+// } else {
+// 	callbackFinishCurrentKeyFrame();
+// }
+// }
+
+// void MappingThread::setNewKeyFrame( const Frame::SharedPtr &frame,  bool block = false )
+// {
+// 	if( _thread ) {
+// 	_thread->send( std::bind( &MappingThread::callbackSetNewCurrentKeyframe, this, frame ));
+//
+// 	if( block ) newKeyframeSync.wait();
+//
+// } else {
+// 	callbackSetNewCurrentKeyframe();
+// }
+// }
+
+
+
 //==== Callbacks ======
 
 
-void MappingThread::callbackIdle( void )
-{
-	//LOG(INFO) << "Mapping thread idle callback";
-	//while( doMappingIteration() ) {
-	//	unmappedTrackedFrames.notifyAll();
-	//}
-}
+// void MappingThread::callbackIdle( void )
+// {
+// 	//LOG(INFO) << "Mapping thread idle callback";
+// 	//while( doMappingIteration() ) {
+// 	//	unmappedTrackedFrames.notifyAll();
+// 	//}
+// }
 
-void MappingThread::callbackUnmappedTrackedFrames( void )
+void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame, bool nominateNewKeyframe )
 {
-	bool nMapped = false;
-	size_t sz = 0;
-	{
-		std::lock_guard<std::mutex> lock( unmappedTrackedFramesMutex );
-		sz = unmappedTrackedFrames.size();
+	// bool nMapped = false;
+	// size_t sz = 0;
+	// {
+	// 	std::lock_guard<std::mutex> lock( unmappedTrackedFramesMutex );
+	// 	sz = unmappedTrackedFrames.size();
+	//
+	// 	if( sz > 0 )
+	// 		nMapped = unmappedTrackedFrames.back()->trackingParent()->numMappedOnThisTotal < 10;
+	// }
+	//
+	// LOG(INFO) << "In unmapped tracked frames callback with " << sz << " frames";
+	//
+	// if(sz < 50 ||
+	//   (sz < 100 && nMapped) ) {
 
-		if( sz > 0 )
-			nMapped = unmappedTrackedFrames.back()->trackingParent()->numMappedOnThisTotal < 10;
+	// If there's no keyframe, then give up
+	if( !(bool)_system.currentKeyFrame().const_ref() ) {
+		LOG(INFO) << "Nothing to map: no keyframe";
+		return;
 	}
 
-	LOG(INFO) << "In unmapped tracked frames callback with " << sz << " frames";
+		// TODO:  Don't know what circumstances cause this to happens
+	// if(!doMapping && currentKeyFrame()->idxInKeyframes < 0)
+	// {
+	// 	if(currentKeyFrame()->numMappedOnThisTotal >= MIN_NUM_MAPPED)
+	// 		finishCurrentKeyframe();
+	// 	else
+	// 		discardCurrentKeyframe();
+	//
+	// 	map->invalidate();
+	// 	LOGF(INFO, "Finished KF %d as Mapping got disabled!\n",currentKeyFrame()->id());
+	//
+	// 	changeKeyframe(true, true, 1.0f);
+	// }
 
-	if(sz < 50 ||
-	  (sz < 100 && nMapped) ) {
+	//callbackMergeOptimizationOffset();
+	//addTimingSamples();
 
-		while( doMappingIteration() ) { ; }
+	// if(dumpMap)
+	// {
+	// 	keyFrameGraph()->dumpMap(packagePath+"/save");
+	// 	dumpMap = false;
+	// }
+
+		//bool didSomething = true;
+
+	// set mappingFrame
+	if( _system.trackingThread->trackingIsGood() )
+	{
+		// TODO:  Don't know under what circumstances doMapping = false
+		// if(!doMapping)
+		// {
+		// 	//printf("tryToChange refframe, lastScore %f!\n", lastTrackingClosenessScore);
+		// 	if(_system.trackingThread->lastTrackingClosenessScore > 1)
+		// 		changeKeyframe(true, false, _system.trackingThread->lastTrackingClosenessScore * 0.75);
+		//
+		// 	if (displayDepthMap || depthMapScreenshotFlag)
+		// 		debugDisplayDepthMap();
+		//
+		// 	return false;
+		// }
+
+		// std::shared_ptr< Frame > frame( _newKeyFrame.const_ref() );
+		if( nominateNewKeyframe ) {
+			LOG(INFO) << "Set " << frame->id() << " as new key frame";
+			finishCurrentKeyframe();
+
+			_system.changeKeyframe(frame, false, true, 1.0f);
+
+			// _newKeyFrame.set( nullptr );
+		} else {
+			 updateKeyframe( frame );
+			 LOG(DEBUG) << "Tracking is good, updating key frame";
+		}
+
+		_system.updateDisplayDepthMap();
+
+	}
+	else
+	{
+		LOG(INFO) << "Tracking is bad";
+
+		// invalidate map if it was valid.
+		if(map->isValid())
+		{
+			if( _system.currentKeyFrame()()->numMappedOnThisTotal >= MIN_NUM_MAPPED)
+				finishCurrentKeyframe();
+			else
+				discardCurrentKeyframe();
+
+			map->invalidate();
+		}
+
+		//TODO:   change what's passed to relocalizer..
+		// start relocalizer if it isnt running already
+		if(!relocalizer.isRunning)
+			relocalizer.start(_system.keyframesAll.ref());
+
+		// did we find a frame to relocalize with?
+		if(relocalizer.waitResult(50)) {
+
+						// Frame* keyframe;
+						// int succFrameID;
+						// SE3 succFrameToKF_init;
+						// std::shared_ptr<Frame> succFrame;
+						//
+						// relocalizer.stop();
+						// relocalizer.getResult(keyframe, succFrame, succFrameID, succFrameToKF_init);
+
+			relocalizer.stop();
+			RelocalizerResult result( relocalizer.getResult() );
+
+			_system.loadNewCurrentKeyframe(result.keyframe);
+
+			_system.trackingThread->takeRelocalizeResult( result );
+		}
+	}
 
 		// TODO:  Was originally in the while() loop above.  However, there are
 		// circumstances (if there's one untracked thread in the queue referenced
@@ -92,9 +215,8 @@ void MappingThread::callbackUnmappedTrackedFrames( void )
 		// waiting on the signal.
 		//
 		// This should be called once per callback otherwise TrackingThread might get hung up?
-		trackedFramesMapped.notify();
+		trackedFramesMappedSync.notify();
 		//}
-	}
 
 	LOG(INFO) << "Done mapping.";
 }
@@ -109,10 +231,10 @@ void MappingThread::callbackMergeOptimizationOffset()
 	// if(_optThread->haveUnmergedOptimizationOffset())
 	{
 		boost::shared_lock_guard< boost::shared_mutex > pose_lock(_system.poseConsistencyMutex);
-		boost::shared_lock_guard< boost::shared_mutex > kfLock( _system.keyFrameGraph()->keyframesAllMutex);
+		SlamSystem::KeyframesAll::LockGuard kfLock( _system.keyframesAll.mutex() );
 
-		for(unsigned int i=0;i<_system.keyFrameGraph()->keyframesAll.size(); i++)
-			_system.keyFrameGraph()->keyframesAll[i]->pose->applyPoseGraphOptResult();
+		for(unsigned int i=0;i<_system.keyframesAll.const_ref().size(); i++)
+			_system.keyframesAll.ref()[i]->pose->applyPoseGraphOptResult();
 
 		// _optThread->clearUnmergedOptimizationOffset();
 
@@ -155,161 +277,53 @@ void MappingThread::randomInit( const Frame::SharedPtr &frame )
 }
 
 
-bool MappingThread::doMappingIteration()
-{
-	// If there's no keyframe, then give up
-	if( !(bool)_system.currentKeyFrame().const_ref() ) {
-		LOG(INFO) << "Nothing to map: no keyframe";
-		return false;
-	}
-
-		// TODO:  Don't know what circumstances cause this to happens
-	// if(!doMapping && currentKeyFrame()->idxInKeyframes < 0)
-	// {
-	// 	if(currentKeyFrame()->numMappedOnThisTotal >= MIN_NUM_MAPPED)
-	// 		finishCurrentKeyframe();
-	// 	else
-	// 		discardCurrentKeyframe();
-	//
-	// 	map->invalidate();
-	// 	LOGF(INFO, "Finished KF %d as Mapping got disabled!\n",currentKeyFrame()->id());
-	//
-	// 	changeKeyframe(true, true, 1.0f);
-	// }
-
-	//callbackMergeOptimizationOffset();
-	//addTimingSamples();
-
-	// if(dumpMap)
-	// {
-	// 	keyFrameGraph()->dumpMap(packagePath+"/save");
-	// 	dumpMap = false;
-	// }
-
-		bool didSomething = true;
-
-	// set mappingFrame
-	if( _system.trackingThread->trackingIsGood() )
-	{
-		// TODO:  Don't know under what circumstances doMapping = false
-		// if(!doMapping)
-		// {
-		// 	//printf("tryToChange refframe, lastScore %f!\n", lastTrackingClosenessScore);
-		// 	if(_system.trackingThread->lastTrackingClosenessScore > 1)
-		// 		changeKeyframe(true, false, _system.trackingThread->lastTrackingClosenessScore * 0.75);
-		//
-		// 	if (displayDepthMap || depthMapScreenshotFlag)
-		// 		debugDisplayDepthMap();
-		//
-		// 	return false;
-		// }
-
-		std::shared_ptr< Frame > frame( _newKeyFrame.const_ref() );
-		if( frame ) {
-			LOG(INFO) << "Set " << frame->id() << " as new key frame";
-			finishCurrentKeyframe();
-			_system.changeKeyframe(frame, false, true, 1.0f);
-
-			_newKeyFrame().reset();
-		} else {
-			 didSomething = updateKeyframe();
-		}
-
-		_system.updateDisplayDepthMap();
-
-		LOG(DEBUG) << "Tracking is good, updating key frame, " << (didSomething ? "DID" : "DIDN'T") << " do something";
-	}
-	else
-	{
-		LOG(INFO) << "Tracking is bad";
-
-		// invalidate map if it was valid.
-		if(map->isValid())
-		{
-			if( _system.currentKeyFrame()()->numMappedOnThisTotal >= MIN_NUM_MAPPED)
-				finishCurrentKeyframe();
-			else
-				discardCurrentKeyframe();
-
-			map->invalidate();
-		}
-
-		// start relocalizer if it isnt running already
-		if(!relocalizer.isRunning)
-			relocalizer.start(_system.keyFrameGraph()->keyframesAll);
-
-		// did we find a frame to relocalize with?
-		if(relocalizer.waitResult(50)) {
-
-						// Frame* keyframe;
-						// int succFrameID;
-						// SE3 succFrameToKF_init;
-						// std::shared_ptr<Frame> succFrame;
-						//
-						// relocalizer.stop();
-						// relocalizer.getResult(keyframe, succFrame, succFrameID, succFrameToKF_init);
-
-			relocalizer.stop();
-			RelocalizerResult result( relocalizer.getResult() );
-
-			_system.loadNewCurrentKeyframe(result.keyframe);
-
-			_system.trackingThread->takeRelocalizeResult( result );
-		}
-	}
-
-	return didSomething;
-}
-
-
-
-
-bool MappingThread::updateKeyframe()
+bool MappingThread::updateKeyframe( const Frame::SharedPtr &frame )
 {
 	std::shared_ptr<Frame> reference = nullptr;
 	std::deque< std::shared_ptr<Frame> > references;
 
-	unmappedTrackedFramesMutex.lock();
+	//unmappedTrackedFramesMutex.lock();
 
-	// Drops frames that have a different tracking parent.
-	while(unmappedTrackedFrames.size() > 0 &&
-			  (!unmappedTrackedFrames.front()->hasTrackingParent() ||
-			   !unmappedTrackedFrames.front()->isTrackingParent( _system.currentKeyFrame().const_ref() ) ) ) {
-					 if( unmappedTrackedFrames.front()->hasTrackingParent() ) {
-					 LOG(INFO) << "Dropping frame " << unmappedTrackedFrames.front()->id()
-					  				<< " its has tracking parent " << unmappedTrackedFrames.front()->trackingParent()->id()
+	// Drops frames that have don't track on teh current Keyframe.
+	if (!frame->hasTrackingParent() ||
+			  !frame->isTrackingParent( _system.currentKeyFrame().const_ref() ) ) {
+					 if( frame->hasTrackingParent() ) {
+					 LOG(INFO) << "Dropping frame " << frame->id()
+					  				<< " its has tracking parent " << frame->trackingParent()->id()
 										<< " current keyframe is " << _system.currentKeyFrame().const_ref()->id();
 						} else {
-							LOG(INFO) << "Dropping frame " << unmappedTrackedFrames.front()->id() << " which doesn't have a tracking parent";
+							LOG(INFO) << "Dropping frame " << frame->id() << " which doesn't have a tracking parent";
 						}
-		unmappedTrackedFrames.front()->clear_refPixelWasGood();
-		unmappedTrackedFrames.pop_front();
+		frame->clear_refPixelWasGood();
 	}
 
 	// clone list
-	if(unmappedTrackedFrames.size() > 0) {
-		// Copies all but only pops one?
-		 for(unsigned int i=0;i<unmappedTrackedFrames.size(); i++)
-		 	references.push_back(unmappedTrackedFrames[i]);
-		//unmappedTrackedFrames().swap( references );
+	// if(unmappedTrackedFrames.size() > 0) {
+	// 	// Copies all but only pops one?
+	// 	 for(unsigned int i=0;i<unmappedTrackedFrames.size(); i++)
+	// 	 	references.push_back(unmappedTrackedFrames[i]);
+	// 	//unmappedTrackedFrames().swap( references );
+	//
+	// 	std::shared_ptr<Frame> popped = unmappedTrackedFrames.front();
+	// 	unmappedTrackedFrames.pop_front();
+	// 	unmappedTrackedFramesMutex.unlock();
 
-		std::shared_ptr<Frame> popped = unmappedTrackedFrames.front();
-		unmappedTrackedFrames.pop_front();
-		unmappedTrackedFramesMutex.unlock();
+		// TODO:   Fix this to deal with one at a time..
+		references.push_back( frame );
 
 		LOGF_IF( INFO, printThreadingInfo,
 			"MAPPING frames %d to %d (%d frames) onto keyframe %d", references.front()->id(), references.back()->id(), (int)references.size(),  _system.currentKeyFrame().const_ref()->id());
 
 		map->updateKeyframe(references);
 
-		popped->clear_refPixelWasGood();
-		references.clear();
-	}
-	else
-	{
-		unmappedTrackedFramesMutex.unlock();
-		return false;
-	}
+		frame->clear_refPixelWasGood();
+		// references.clear();
+	// }
+	// else
+	// {
+	// 	unmappedTrackedFramesMutex.unlock();
+	// 	return false;
+	// }
 
 
 	// if( outputWrapper ) {
@@ -341,7 +355,7 @@ bool MappingThread::updateKeyframe()
 
 
 
-	// Why is this here?
+	// TODO: Why is this here?
 	if( _system.conf().continuousPCOutput && (bool)_system.currentKeyFrame()() )
 			_system.publishKeyframe( _system.currentKeyFrame().const_ref() );
 
@@ -354,30 +368,24 @@ bool MappingThread::updateKeyframe()
 void MappingThread::finishCurrentKeyframe()
 {
 	LOG_IF(DEBUG, printThreadingInfo) << "FINALIZING KF " << _system.currentKeyFrame().const_ref()->id();
-
 	map->finalizeKeyFrame();
-
-	if(_system.conf().SLAMEnabled)
-	{
-		mappingTrackingReference->importFrame(_system.currentKeyFrame().const_ref());
-		_system.currentKeyFrame()()->setPermaRef(mappingTrackingReference);
-		mappingTrackingReference->invalidate();
-
-		if(_system.currentKeyFrame().const_ref()->idxInKeyframes < 0)
-		{
-			_system.keyFrameGraph()->keyframesAllMutex.lock();
-			_system.currentKeyFrame()()->idxInKeyframes = _system.keyFrameGraph()->keyframesAll.size();
-			_system.keyFrameGraph()->keyframesAll.push_back(_system.currentKeyFrame().const_ref() );
-			_system.keyFrameGraph()->totalPoints += _system.currentKeyFrame().const_ref()->numPoints;
-			_system.keyFrameGraph()->totalVertices ++;
-			_system.keyFrameGraph()->keyframesAllMutex.unlock();
-
-			_system.constraintThread->newKeyFrame( _system.currentKeyFrame().const_ref() );
-		}
-	}
-
-	_system.publishKeyframe(_system.currentKeyFrame().const_ref() );
 }
+
+// void MappingThread::callbackSetNewCurrentKeyframe()
+// {
+// 	LOG_IF(DEBUG, printThreadingInfo) << "SETTING NEW KF " << _system.currentKeyFrame().const_ref()->id();
+//
+// 	// if(_system.conf().SLAMEnabled)
+// 	// {
+// 	// 	mappingTrackingReference->importFrame(_system.currentKeyFrame().const_ref());
+// 	// 	_system.currentKeyFrame()()->setPermaRef(mappingTrackingReference);
+// 	// 	mappingTrackingReference->invalidate();
+// 	// }
+//
+// 	newKeyframeSync.notify();
+//
+// //	_system.publishKeyframe(_system.currentKeyFrame().const_ref() );
+// }
 
 void MappingThread::discardCurrentKeyframe()
 {
@@ -394,8 +402,8 @@ void MappingThread::discardCurrentKeyframe()
 	map->invalidate();
 
 	{
-		boost::shared_lock_guard< boost::shared_mutex > lock( _system.keyFrameGraph()->allFramePosesMutex );
-		for(auto p : _system.keyFrameGraph()->allFramePoses)
+		SlamSystem::AllFramePoses::LockGuard lock( _system.allFramePoses.mutex() );
+		for(auto p : _system.allFramePoses.ref())
 		{
 			if(p->frame.isTrackingParent( _system.currentKeyFrame().const_ref() ) )
 				p->frame.setTrackingParent( nullptr );
@@ -403,8 +411,8 @@ void MappingThread::discardCurrentKeyframe()
 	}
 
 	{
-		boost::shared_lock_guard< boost::shared_mutex > lock(_system.keyFrameGraph()->idToKeyFrameMutex);
-		_system.keyFrameGraph()->idToKeyFrame.erase(_system.currentKeyFrame().const_ref()->id());
+		SlamSystem::IdToKeyFrame::LockGuard lock(_system.idToKeyFrame.mutex());
+		_system.idToKeyFrame.get().erase(_system.currentKeyFrame().const_ref()->id());
 	}
 
 }

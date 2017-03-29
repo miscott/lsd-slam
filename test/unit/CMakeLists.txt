@@ -2,8 +2,10 @@ include_directories( ${CONAN_INCLUDE_DIRS}
                       ${GTEST_INCLUDE_DIRS}
                      ${CMAKE_SOURCE_DIR}/lib )
 
+file( GLOB UNIT_TEST_SRCS test_*.cpp )
+
 add_executable( lsdslam_test
-              test_test.cpp )
+                ${UNIT_TEST_SRCS} )
 
 link_directories( ${CONAN_LINK_DIRECTORIES} )
 target_link_libraries( lsdslam_test

@@ -32,7 +32,7 @@ PangolinOutput3DWrapper::~PangolinOutput3DWrapper()
 
 void PangolinOutput3DWrapper::publishPose( const Sophus::Sim3f &pose )
 {
-  _gui.pose.assignValue( pose );
+  _gui.pose.set( pose );
 }
 
 void PangolinOutput3DWrapper::updateDepthImage(unsigned char * data)
@@ -136,25 +136,26 @@ void PangolinOutput3DWrapper::publishTrackedFrame(const Frame::SharedPtr &kf)
 
 void PangolinOutput3DWrapper::publishKeyframeGraph( const std::shared_ptr<KeyFrameGraph> &graph)
 {
-    graph->keyframesAllMutex.lock_shared();
-
-    int num = graph->keyframesAll.size();
-
-    unsigned char * buffer = new unsigned char[num * sizeof(GraphFramePose)];
-
-    GraphFramePose* framePoseData = (GraphFramePose*)buffer;
-
-    for(unsigned int i = 0; i < graph->keyframesAll.size(); i++)
-    {
-        framePoseData[i].id = graph->keyframesAll[i]->id();
-        memcpy(framePoseData[i].camToWorld, graph->keyframesAll[i]->getCamToWorld().cast<float>().data(), sizeof(float) * 7);
-    }
-
-    graph->keyframesAllMutex.unlock_shared();
-
-    _gui.updateKeyframePoses(framePoseData, num);
-
-    delete [] buffer;
+// TODO:   Fix this  
+    // graph->keyframesAllMutex.lock_shared();
+    //
+    // int num = graph->keyframesAll.size();
+    //
+    // unsigned char * buffer = new unsigned char[num * sizeof(GraphFramePose)];
+    //
+    // GraphFramePose* framePoseData = (GraphFramePose*)buffer;
+    //
+    // for(unsigned int i = 0; i < graph->keyframesAll.size(); i++)
+    // {
+    //     framePoseData[i].id = graph->keyframesAll[i]->id();
+    //     memcpy(framePoseData[i].camToWorld, graph->keyframesAll[i]->getCamToWorld().cast<float>().data(), sizeof(float) * 7);
+    // }
+    //
+    // graph->keyframesAllMutex.unlock_shared();
+    //
+    // _gui.updateKeyframePoses(framePoseData, num);
+    //
+    // delete [] buffer;
 }
 
 void PangolinOutput3DWrapper::publishTrajectory(std::vector<Eigen::Matrix<float, 3, 1>> trajectory, std::string identifier)

@@ -80,7 +80,7 @@ int main( int argc, char** argv )
   LOG(INFO) << "Starting all threads.";
   startAll.notify();
 
-  while( !pangolin::ShouldQuit() && !input.inputDone.getValue() ) {
+  while( !pangolin::ShouldQuit() && !input.inputDone() ) {
     gui->update();
   }
 

@@ -13,8 +13,10 @@ GUI::GUI( const lsd_slam::Configuration &conf )
  : _conf( conf ),
     liveImg(NULL),
    depthImg(NULL),
-   liveImgBuffer(NULL),
-   depthImgBuffer(NULL)
+   liveImgBuffer( new unsigned char[conf.slamImage.area()] ),
+   liveImgMutex(),
+   depthImgBuffer( new unsigned char[conf.slamImage.area() * 3] ),
+   depthImgMutex()
 {
     const int initialWidth = 800, initialHeight = 800;
 
@@ -54,24 +56,24 @@ GUI::~GUI()
     if(depthImg)
         delete depthImg;
 
-    if(depthImgBuffer.getValue())
-        delete [] depthImgBuffer.getValue();
+    // if(depthImgBuffer.get())
+    //     delete [] depthImgBuffer.getValue();
 
     if(liveImg)
         delete liveImg;
-
-    if(liveImgBuffer.getValue())
-        delete [] liveImgBuffer.getValue();
+    //
+    // if(liveImgBuffer.getValue())
+    //     delete [] liveImgBuffer.getValue();
 
     {
       std::lock_guard<std::mutex> lock(keyframes.mutex());
 
-      for(std::map<int, Keyframe *>::iterator i = keyframes.getReference().begin(); i != keyframes.getReference().end(); ++i)
+      for(auto i = keyframes.const_ref().begin(); i != keyframes.const_ref().end(); ++i)
       {
           delete i->second;
       }
 
-      keyframes.getReference().clear();
+      keyframes.ref().clear();
     }
 
     delete totalPoints;
@@ -82,10 +84,7 @@ GUI::~GUI()
 void GUI::initImages()
 {
     depthImg = new pangolin::GlTexture(_conf.slamImage.width, _conf.slamImage.height, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE);
-    depthImgBuffer.assignValue(new unsigned char[_conf.slamImage.area() * 3]);
-
     liveImg = new pangolin::GlTexture(_conf.slamImage.width, _conf.slamImage.height, GL_LUMINANCE, true, 0, GL_RGB, GL_UNSIGNED_BYTE);
-    liveImgBuffer.assignValue(new unsigned char[_conf.slamImage.area()]);
 }
 
 void GUI::update( void )
@@ -100,15 +99,15 @@ void GUI::update( void )
 
 void GUI::updateDepthImage(unsigned char * data)
 {
-  std::lock_guard<std::mutex> lock(depthImgBuffer.mutex());
-  memcpy(depthImgBuffer.getReference(), data, _conf.slamImage.area() * 3);
+  std::lock_guard<std::mutex> lock(depthImgMutex);
+  memcpy(depthImgBuffer.get(), data, _conf.slamImage.area() * 3);
 }
 
 // Expects CV_8UC1 data
 void GUI::updateLiveImage(unsigned char * data)
 {
-  std::lock_guard<std::mutex> lock(liveImgBuffer.mutex());
-  memcpy(liveImgBuffer.getReference(), data, _conf.slamImage.area() );
+  std::lock_guard<std::mutex> lock(liveImgMutex);
+  memcpy(liveImgBuffer.get(), data, _conf.slamImage.area() );
 }
 
 void GUI::updateFrameNumber( int fn )
@@ -121,16 +120,16 @@ void GUI::addKeyframe(Keyframe * newFrame)
   std::lock_guard<std::mutex> lock(keyframes.mutex());
 
   //Exists
-  if(keyframes.getReference().find(newFrame->id) != keyframes.getReference().end())
+  if(keyframes.const_ref().find(newFrame->id) != keyframes.const_ref().end())
   {
-      keyframes.getReference()[newFrame->id]->updatePoints(newFrame);
+      keyframes.ref()[newFrame->id]->updatePoints(newFrame);
 
       delete newFrame;
   }
   else
   {
-      newFrame->initId = keyframes.getReference().size();
-      keyframes.getReference()[newFrame->id] = newFrame;
+      newFrame->initId = keyframes.const_ref().size();
+      keyframes.ref()[newFrame->id] = newFrame;
   }
 }
 
@@ -140,9 +139,9 @@ void GUI::updateKeyframePoses(GraphFramePose* framePoseData, int num)
 
   for(int i = 0; i < num; i++)
   {
-      if(keyframes.getReference().find(framePoseData[i].id) != keyframes.getReference().end())
+      if(keyframes.const_ref().find(framePoseData[i].id) != keyframes.const_ref().end())
       {
-          memcpy(keyframes.getReference()[framePoseData[i].id]->camToWorld.data(), &framePoseData[i].camToWorld[0], sizeof(float) * 7);
+          memcpy(keyframes.ref()[framePoseData[i].id]->camToWorld.data(), &framePoseData[i].camToWorld[0], sizeof(float) * 7);
       }
   }
 }
@@ -162,16 +161,16 @@ void GUI::preCall()
 void GUI::drawImages()
 {
     {
-      std::lock_guard<std::mutex> lock(depthImgBuffer.mutex());
-      depthImg->Upload(depthImgBuffer.getReference(), GL_RGB, GL_UNSIGNED_BYTE);
+      std::lock_guard<std::mutex> lock(depthImgMutex);
+      depthImg->Upload((void *)depthImgBuffer.get(), GL_RGB, GL_UNSIGNED_BYTE);
     }
 
     pangolin::Display("DepthImage").Activate();
     depthImg->RenderToViewport(true);
 
     {
-      std::lock_guard<std::mutex> lock(liveImgBuffer.mutex());
-      liveImg->Upload(liveImgBuffer.getReference(), GL_LUMINANCE, GL_UNSIGNED_BYTE);
+      std::lock_guard<std::mutex> lock(liveImgMutex);
+      liveImg->Upload((void *)liveImgBuffer.get(), GL_LUMINANCE, GL_UNSIGNED_BYTE);
     }
 
     pangolin::Display("LiveImage").Activate();
@@ -185,7 +184,7 @@ void GUI::drawKeyframes()
     glEnable(GL_MULTISAMPLE);
     glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 
-    for(std::map<int, Keyframe *>::iterator i = keyframes.getReference().begin(); i != keyframes.getReference().end(); ++i)
+    for(auto i = keyframes.const_ref().begin(); i != keyframes.const_ref().end(); ++i)
     {
         // Don't render first five, according to original code
         if(i->second->initId >= 5)
@@ -208,7 +207,7 @@ void GUI::drawFrustum()
   lsd_slam::ImageSize img( _conf.slamImage );
 
   glPushMatrix();
-  Sophus::Matrix4f m = pose.getValue().matrix();
+  Sophus::Matrix4f m = pose.const_ref().matrix();
   glMultMatrixf((GLfloat*) m.data());
   glColor3f(1, 0, 0);
   glBegin(GL_LINES);
