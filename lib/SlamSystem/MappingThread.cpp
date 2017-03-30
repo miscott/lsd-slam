@@ -154,7 +154,7 @@ void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame, bool nomina
 
 		// std::shared_ptr< Frame > frame( _newKeyFrame.const_ref() );
 		if( nominateNewKeyframe ) {
-			LOG(INFO) << "Set " << frame->id() << " as new key frame";
+			LOG(INFO) << "Use " << frame->id() << " as new key frame";
 			finishCurrentKeyframe();
 
 			_system.changeKeyframe(frame, false, true, 1.0f);

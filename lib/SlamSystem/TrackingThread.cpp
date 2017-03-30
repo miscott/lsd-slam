@@ -259,7 +259,8 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 
 		if(_system.keyframesAll.const_ref().size() < INITIALIZATION_PHASE_COUNT)	minVal *= 0.7;
 
-		lastTrackingClosenessScore = _system.trackableKeyFrameSearch()->getRefFrameScore(dist.dot(dist), _tracker->pointUsage);
+		auto d2 = dist.dot(dist);
+		lastTrackingClosenessScore = _system.trackableKeyFrameSearch()->getRefFrameScore(d2, _tracker->pointUsage);
 
 		if (lastTrackingClosenessScore > minVal)
 		{
@@ -269,13 +270,23 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 			// createNewKeyFrame = true;
 
 			LOGF_IF( INFO, printKeyframeSelectionInfo,
-							"SELECT KEYFRAME %d on %d! dist %.3f + usage %.3f = %.3f > 1\n",newFrame->id(),newFrame->trackingParent()->id(), dist.dot(dist), _tracker->pointUsage, _system.trackableKeyFrameSearch()->getRefFrameScore(dist.dot(dist), _tracker->pointUsage));
+							"SELECT KEYFRAME %d on %d! f(dist %.3f, usage %.3f) = %.3f > %.3f",
+							newFrame->id(),newFrame->trackingParent()->id(),
+							d2,
+							_tracker->pointUsage,
+							lastTrackingClosenessScore,
+							minVal );
+
 		}
 		else
 		{
 			LOGF_IF( INFO, printKeyframeSelectionInfo,
-							"SKIPPD KEYFRAME %d on %d! dist %.3f + usage %.3f = %.3f > 1\n",newFrame->id(),newFrame->trackingParent()->id(), dist.dot(dist), _tracker->pointUsage, _system.trackableKeyFrameSearch()->getRefFrameScore(dist.dot(dist), _tracker->pointUsage));
-
+							"SKIPPD KEYFRAME %d on %d! f(dist %.3f, usage %.3f) = %.3f <= %.3f",
+							newFrame->id(),newFrame->trackingParent()->id(),
+							d2,
+							_tracker->pointUsage,
+							lastTrackingClosenessScore,
+							minVal );
 		}
 	}
 

@@ -287,6 +287,7 @@ void SlamSystem::createNewCurrentKeyframe( const Frame::SharedPtr &newKeyframe )
 		idToKeyFrame.ref().insert(std::make_pair( newKeyframe->id(), newKeyframe ));
 	}
 	// propagate & make new.
+	mapThread->map->createKeyFrame( newKeyframe );
 
 	currentKeyFrame().set( newKeyframe );
 
@@ -371,11 +372,16 @@ void SlamSystem::updateDisplayDepthMap()
 	char buf1[200];
 	char buf2[200];
 
+	if( currentKeyFrame().ref() ) {
 	snprintf(buf1,200,"Map: Upd %3.0fms (%2.0fHz); Trk %3.0fms (%2.0fHz); %d / %d",
 			mapThread->map->_perf.update.ms(), mapThread->map->_perf.update.rate(),
 			trackingThread->perf.ms(), trackingThread->perf.rate(),
 			currentKeyFrame()()->numFramesTrackedOnThis, currentKeyFrame()()->numMappedOnThis ); //, (int)unmappedTrackedFrames().size());
-
+		} else {
+			snprintf(buf1,200,"Map: Upd %3.0fms (%2.0fHz); Trk %3.0fms (%2.0fHz); xx / xx",
+					mapThread->map->_perf.update.ms(), mapThread->map->_perf.update.rate(),
+					trackingThread->perf.ms(), trackingThread->perf.rate() );
+		}
 	// snprintf(buf2,200,"dens %2.0f%%; good %2.0f%%; scale %2.2f; res %2.1f/; usg %2.0f%%; Map: %d F, %d KF, %d E, %.1fm Pts",
 	// 		100*currentKeyFrame->numPoints/(float)(conf().slamImage.area()),
 	// 		100*tracking_lastGoodPerBad,
