@@ -13,8 +13,9 @@ target_link_libraries( lsdslam_test
           ${GTEST_BOTH_LIBRARIES}
           lsdslam )
 
+
 # # Don't use ctest, instead just execture the Google test binaries
 add_custom_target( unit_test
-                		WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-                		COMMAND ./lsdslam_test
+                		WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                		COMMAND lsdslam_test
                     DEPENDS lsdslam_test )

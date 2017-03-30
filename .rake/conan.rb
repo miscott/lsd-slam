@@ -46,7 +46,7 @@ class ConanTasks
 
 
           task :test => :build do
-            sh "cd %s && make unit_test" % build_dir
+            #sh "cd %s && make unit_test" % build_dir
           end
 
           task :clean do
