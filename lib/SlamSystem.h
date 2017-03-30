@@ -68,7 +68,6 @@ namespace lsd_slam
 	using std::shared_ptr;
 
 class SlamSystem {
-
 friend class IntegrationTest;
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -101,6 +100,8 @@ public:
 	Sophus::Sim3f getCurrentPoseEstimateScale();
 
 	//==== KeyFrame maintenance functions ====
+
+	// TODO.   Is this the right place for this?
 	MutexObject< Frame::SharedPtr >  &currentKeyFrame() { return _currentKeyFrame; };
 
 	void changeKeyframe( const Frame::SharedPtr &frame, bool noCreate, bool force, float maxScore);

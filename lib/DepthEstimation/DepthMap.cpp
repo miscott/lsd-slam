@@ -1213,6 +1213,8 @@ void DepthMap::invalidate()
 
 void DepthMap::createKeyFrame( const Frame::SharedPtr &new_keyframe)
 {
+	LOG(INFO) << "Creating new keyframe from " << new_keyframe->id() ;
+
 	assert(isValid());
 	assert(new_keyframe != nullptr);
 	assert(new_keyframe->hasTrackingParent());

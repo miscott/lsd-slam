@@ -253,6 +253,8 @@ void KeyFrameGraph::insertConstraint(KFConstraintStruct* constraint)
 	edge->setInformation(constraint->information);
 	edge->setRobustKernel(constraint->robustKernel);
 
+	LOG(INFO) << "Adding constraint from " << constraint->firstFrame->id() << " to " << constraint->secondFrame->id();
+
 	edge->resize(2);
 	assert(constraint->firstFrame->pose->graphVertex != nullptr);
 	edge->setVertex(0, constraint->firstFrame->pose->graphVertex);

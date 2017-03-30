@@ -187,6 +187,7 @@ void SlamSystem::initialize( const Frame::SharedPtr &frame )
 	}
 
 	storePose( frame );
+	keyFrameGraph()->addKeyFrame( frame );
 
 	if( conf().SLAMEnabled ) {
 		IdToKeyFrame::LockGuard lock( idToKeyFrame.mutex() );
@@ -267,11 +268,12 @@ void SlamSystem::loadNewCurrentKeyframe( const Frame::SharedPtr &keyframeToLoad)
 
 	// LOG_IF(DEBUG, enablePrintDebugInfo && printThreadingInfo ) << "RE-ACTIVATE KF " << keyframeToLoad->id();
 
-	mapThread->map->setFromExistingKF(keyframeToLoad);
+	mapThread->reloadExistingKF( keyframeToLoad );
+	//mapThread->map->setFromExistingKF(keyframeToLoad);
 
 	LOG_IF(DEBUG, enablePrintDebugInfo && printRegularizeStatistics ) << "re-activate frame " << keyframeToLoad->id() << "!";
 
-	currentKeyFrame().set( idToKeyFrame.const_ref().find(keyframeToLoad->id())->second );
+	currentKeyFrame().set( keyframeToLoad );  //idToKeyFrame.const_ref().find(keyframeToLoad->id())->second );
 	currentKeyFrame()()->depthHasBeenUpdatedFlag = false;
 }
 
@@ -286,12 +288,10 @@ void SlamSystem::createNewCurrentKeyframe( const Frame::SharedPtr &newKeyframe )
 		MutexObject< std::unordered_map< int, Frame::SharedPtr > >::LockGuard lock( idToKeyFrame.mutex() );
 		idToKeyFrame.ref().insert(std::make_pair( newKeyframe->id(), newKeyframe ));
 	}
-	// propagate & make new.
-	mapThread->map->createKeyFrame( newKeyframe );
+
+	mapThread->newKeyframe( newKeyframe, true );
 
 	currentKeyFrame().set( newKeyframe );
-
-	// mapThread->setNewKeyFrame( currentKeyFrame(), true );
 
 	if(conf().SLAMEnabled)
 	{

@@ -30,7 +30,7 @@ public:
 	~MappingThread();
 
 	//=== Callbacks into the thread ===
-	void mapTrackedFrame( const Frame::SharedPtr &frame, bool block = true, bool nominateNewKeyframe = false )
+	void mapTrackedFrame( const Frame::SharedPtr &frame, bool doBlock = true )
 	{
 		// {
 		// 	std::lock_guard<std::mutex> lock(unmappedTrackedFramesMutex );
@@ -38,12 +38,12 @@ public:
 		// }
 
 		if( _thread ) {
-			_thread->send( std::bind( &MappingThread::callbackMapTrackedFrame, this, frame, nominateNewKeyframe ));
-			if( block ) {
-				trackedFramesMappedSync.wait();
-			}
+			_thread->send( std::bind( &MappingThread::callbackMapTrackedFrame, this, frame ));
+
+			if( doBlock ) trackedFramesMappedSync.wait();
+			
 		} else {
-			callbackMapTrackedFrame( Frame::SharedPtr(frame), nominateNewKeyframe );
+			callbackMapTrackedFrame( Frame::SharedPtr(frame) );
 		}
 	}
 
@@ -53,6 +53,11 @@ public:
 	void mergeOptimizationUpdate( void )
 	{ optimizationUpdateMerged.reset();
 		if( _thread ) _thread->send( std::bind( &MappingThread::callbackMergeOptimizationOffset, this )); }
+
+		void newKeyframe( const Frame::SharedPtr &frame, bool doBlock );
+
+		void reloadExistingKF( const Frame::SharedPtr &frame );
+
 
 		//void finishCurrentKeyFrame( bool block = false );
 		// void setNewKeyFrame( const Frame::SharedPtr &frame,  bool block = false );
@@ -99,7 +104,12 @@ private:
 
 	// == Thread callbacks ==
 	//void callbackIdle( void );
-	void callbackMapTrackedFrame( Frame::SharedPtr frame, bool nominateNewKeyframe );
+	void callbackMapTrackedFrame( Frame::SharedPtr frame);
+	void callbackNewKeyframe( Frame::SharedPtr frame );
+	ThreadSynchronizer newKeyframeSync;
+
+	void callbackReloadExistingKF( Frame::SharedPtr frame );
+
 	//void callbackCreateNewKeyFrame( std::shared_ptr<Frame> frame );
 
 	// == Local functions ==
@@ -115,7 +125,6 @@ private:
 	//ThreadSynchronizer finishCurrentKeyframeSync;
 
 	// void callbackSetNewCurrentKeyframe();
-	// ThreadSynchronizer newKeyframeSync;
 
 	void discardCurrentKeyframe();
 

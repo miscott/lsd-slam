@@ -36,11 +36,13 @@ int privateFrameAllocCount = 0;
 Frame::Frame(int frameId, const Configuration &conf,
 							double timestamp, const unsigned char* image )
 	: _conf( conf ),
-	pose( new FramePoseStruct(*this) ),
+	pose( nullptr ),
 	_trackingParent( nullptr ),
 	data( frameId, timestamp, conf.camera, conf.slamImage )
 {
 	initialize(timestamp);
+
+	pose.reset( new FramePoseStruct(*this) );
 
 	data.image[0] = FrameMemory::getInstance().getFloatBuffer(data.width[0]*data.height[0]);
 	float* maxPt = data.image[0] + data.width[0]*data.height[0];

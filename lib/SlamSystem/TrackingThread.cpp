@@ -249,7 +249,11 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 	LOG(INFO) << "While tracking " << newFrame->id() << " the keyframe is " << _system.currentKeyFrame().const_ref()->id();
 	LOG_IF( INFO, printThreadingInfo ) << _system.currentKeyFrame().const_ref()->numMappedOnThisTotal << " frames mapped on to keyframe " << _system.currentKeyFrame().const_ref()->id() << ", considering " << newFrame->id() << " as new keyframe.";
 
-	bool nominateNewKeyframe = false;
+	LOG_IF( DEBUG, printThreadingInfo ) << "Push unmapped tracked frame.";
+	_system.mapThread->mapTrackedFrame( newFrame, blockUntilMapped );
+
+
+	//bool nominateNewKeyframe = false;
 //	if(!newKeyFramePending && _system.currentKeyFrame().const_ref()->numMappedOnThisTotal > MIN_NUM_MAPPED)
 
 	if( _system.currentKeyFrame().const_ref()->numMappedOnThisTotal > MIN_NUM_MAPPED)
@@ -266,9 +270,8 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 		{
 			LOG(INFO) << "Telling mapping thread to make " << newFrame->id() << " the new keyframe.";
 			//_system.mapThread->createNewKeyFrame( newFrame );
-			nominateNewKeyframe = true;
+			//nominateNewKeyframe = true;
 			// createNewKeyFrame = true;
-
 			LOGF_IF( INFO, printKeyframeSelectionInfo,
 							"SELECT KEYFRAME %d on %d! f(dist %.3f, usage %.3f) = %.3f > %.3f",
 							newFrame->id(),newFrame->trackingParent()->id(),
@@ -276,6 +279,8 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 							_tracker->pointUsage,
 							lastTrackingClosenessScore,
 							minVal );
+
+			_system.changeKeyframe(newFrame, false, true, 1.0f);
 
 		}
 		else
@@ -290,8 +295,7 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 		}
 	}
 
-	LOG_IF( DEBUG, printThreadingInfo ) << "Push unmapped tracked frame.";
-	_system.mapThread->mapTrackedFrame( newFrame, blockUntilMapped, nominateNewKeyframe );
+	// TODO:  Change nominateNewKeyframe to be a poke into _slamSystem.
 
 	// unmappedTrackedFrames.notifyAll();
 		// unmappedTrackedFramesSignal.notify_one();

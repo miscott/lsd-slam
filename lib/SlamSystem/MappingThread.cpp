@@ -27,6 +27,7 @@ MappingThread::MappingThread( SlamSystem &system )
 		relocalizer( system.conf() ),
 		map( new DepthMap( system.conf() ) ),
 		trackedFramesMappedSync(),
+		newKeyframeSync(),
 		_thread( Active::createActive() )
 {
 	LOG(INFO) << "Started Mapping thread";
@@ -49,6 +50,29 @@ MappingThread::~MappingThread()
 	//trackingReferenceFrameSharedPT.reset();
 
 	//LOG(INFO) << "Exited Mapping thread";
+}
+
+void MappingThread::newKeyframe( const Frame::SharedPtr &frame, bool doBlock )
+{
+	if( _thread ) {
+		newKeyframeSync.reset();
+		_thread->send( std::bind( &MappingThread::callbackNewKeyframe, this, frame ));
+
+		if( doBlock ) {
+			newKeyframeSync.wait();
+		}
+	} else {
+		callbackNewKeyframe( frame );
+	}
+}
+
+void MappingThread::reloadExistingKF( const Frame::SharedPtr &frame )
+{
+	if( _thread ) {
+		_thread->send( std::bind( &MappingThread::callbackReloadExistingKF, this, frame ));
+	} else {
+		callbackReloadExistingKF( frame );
+	}
 }
 
 // void MappingThread::finishCurrentKeyFrame( bool block = false )
@@ -88,22 +112,8 @@ MappingThread::~MappingThread()
 // 	//}
 // }
 
-void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame, bool nominateNewKeyframe )
+void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame )
 {
-	// bool nMapped = false;
-	// size_t sz = 0;
-	// {
-	// 	std::lock_guard<std::mutex> lock( unmappedTrackedFramesMutex );
-	// 	sz = unmappedTrackedFrames.size();
-	//
-	// 	if( sz > 0 )
-	// 		nMapped = unmappedTrackedFrames.back()->trackingParent()->numMappedOnThisTotal < 10;
-	// }
-	//
-	// LOG(INFO) << "In unmapped tracked frames callback with " << sz << " frames";
-	//
-	// if(sz < 50 ||
-	//   (sz < 100 && nMapped) ) {
 
 	// If there's no keyframe, then give up
 	if( !(bool)_system.currentKeyFrame().const_ref() ) {
@@ -111,30 +121,8 @@ void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame, bool nomina
 		return;
 	}
 
-		// TODO:  Don't know what circumstances cause this to happens
-	// if(!doMapping && currentKeyFrame()->idxInKeyframes < 0)
-	// {
-	// 	if(currentKeyFrame()->numMappedOnThisTotal >= MIN_NUM_MAPPED)
-	// 		finishCurrentKeyframe();
-	// 	else
-	// 		discardCurrentKeyframe();
-	//
-	// 	map->invalidate();
-	// 	LOGF(INFO, "Finished KF %d as Mapping got disabled!\n",currentKeyFrame()->id());
-	//
-	// 	changeKeyframe(true, true, 1.0f);
-	// }
 
-	//callbackMergeOptimizationOffset();
-	//addTimingSamples();
 
-	// if(dumpMap)
-	// {
-	// 	keyFrameGraph()->dumpMap(packagePath+"/save");
-	// 	dumpMap = false;
-	// }
-
-		//bool didSomething = true;
 
 	// set mappingFrame
 	if( _system.trackingThread->trackingIsGood() )
@@ -152,18 +140,16 @@ void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame, bool nomina
 		// 	return false;
 		// }
 
-		// std::shared_ptr< Frame > frame( _newKeyFrame.const_ref() );
-		if( nominateNewKeyframe ) {
-			LOG(INFO) << "Use " << frame->id() << " as new key frame";
-			finishCurrentKeyframe();
-
-			_system.changeKeyframe(frame, false, true, 1.0f);
-
-			// _newKeyFrame.set( nullptr );
-		} else {
+		// if( nominateNewKeyframe ) {
+		// 	LOG(INFO) << "Use " << frame->id() << " as new key frame";
+		// 	finishCurrentKeyframe();
+		//
+		// 	_system.changeKeyframe(frame, false, true, 1.0f);
+		//
+		// } else {
 			 updateKeyframe( frame );
 			 LOG(DEBUG) << "Tracking is good, updating key frame";
-		}
+		// }
 
 		_system.updateDisplayDepthMap();
 
@@ -244,6 +230,24 @@ void MappingThread::callbackMergeOptimizationOffset()
 	if ( didUpdate ) _system.publishKeyframeGraph();
 
 	optimizationUpdateMerged.notify();
+}
+
+void MappingThread::callbackNewKeyframe( Frame::SharedPtr frame )
+{
+	LOG(INFO) << "Start handling new keyframe";
+
+	finishCurrentKeyframe();
+
+	map->createKeyFrame( frame );
+
+	LOG(INFO) << "Done handling new keyframe";
+	newKeyframeSync.notify();
+}
+
+void MappingThread::callbackReloadExistingKF( Frame::SharedPtr frame )
+{
+	finishCurrentKeyframe();
+	map->setFromExistingKF( frame);
 }
 
 // void MappingThread::callbackCreateNewKeyFrame( std::shared_ptr<Frame> frame )
