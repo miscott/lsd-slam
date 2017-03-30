@@ -7,6 +7,7 @@ ExternalProject_Add( G2O
               PREFIX g2o
               BUILD_COMMAND ${EXTERNAL_PROJECT_MAKE_COMMAND}
               PATCH_COMMAND cd ${CMAKE_BINARY_DIR}/g2o/src/G2O/ && git apply ${CMAKE_CURRENT_LIST_DIR}/G2O_AlignedBit_deprecation.patch
+              UPDATE_DISCONNECTED 1
               CMAKE_CACHE_ARGS  -DCMAKE_BUILD_TYPE:string=Release
                       -DCMAKE_INSTALL_PREFIX:path=${G2O_INSTALL_DIR}
                       -DG2O_BUILD_APPS:bool=OFF
