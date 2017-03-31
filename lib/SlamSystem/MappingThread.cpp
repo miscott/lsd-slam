@@ -177,14 +177,6 @@ void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame )
 		// did we find a frame to relocalize with?
 		if(relocalizer.waitResult(50)) {
 
-						// Frame* keyframe;
-						// int succFrameID;
-						// SE3 succFrameToKF_init;
-						// std::shared_ptr<Frame> succFrame;
-						//
-						// relocalizer.stop();
-						// relocalizer.getResult(keyframe, succFrame, succFrameID, succFrameToKF_init);
-
 			relocalizer.stop();
 			RelocalizerResult result( relocalizer.getResult() );
 
@@ -194,15 +186,7 @@ void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame )
 		}
 	}
 
-		// TODO:  Was originally in the while() loop above.  However, there are
-		// circumstances (if there's one untracked thread in the queue referenced
-		// to an older keyframe) where doMappingIteration will return false, and this
-		// notify never happens.   If that happens, TrackingThread will stop if it's
-		// waiting on the signal.
-		//
-		// This should be called once per callback otherwise TrackingThread might get hung up?
-		trackedFramesMappedSync.notify();
-		//}
+	trackedFramesMappedSync.notify();
 
 	LOG(INFO) << "Done mapping.";
 }
@@ -227,7 +211,7 @@ void MappingThread::callbackMergeOptimizationOffset()
 		didUpdate = true;
 	}
 
-	if ( didUpdate ) _system.publishKeyframeGraph();
+	if ( didUpdate ) _system.io().publishKeyframeGraph();
 
 	optimizationUpdateMerged.notify();
 }
@@ -361,7 +345,7 @@ bool MappingThread::updateKeyframe( const Frame::SharedPtr &frame )
 
 	// TODO: Why is this here?
 	if( _system.conf().continuousPCOutput && (bool)_system.currentKeyFrame()() )
-			_system.publishKeyframe( _system.currentKeyFrame().const_ref() );
+			_system.io().publishKeyframe( _system.currentKeyFrame().const_ref() );
 
 	return true;
 }

@@ -3,6 +3,8 @@
 *
 * Copyright 2013 Jakob Engel <engelj at in dot tum dot de> (Technical University of Munich)
 * For more information see <http://vision.in.tum.de/lsdslam>
+* Copyright 2017 Aaron Marburg <amarburg at apl dot washington edu>
+$ See also <https://www.github.com/amarburg/lsd_slam/>
 *
 * LSD-SLAM is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -31,7 +33,6 @@
 #include "IOWrapper/Timestamp.h"
 #include "opencv2/core/core.hpp"
 
-#include "IOWrapper/Output3DWrapper.h"
 
 #include "DataStructures/Frame.h"
 
@@ -42,6 +43,9 @@
 #include "util/ThreadMutexObject.h"
 
 #include "Tracking/Relocalizer.h"
+
+#include "SlamSystem/IO.h"
+
 
 namespace lsd_slam
 {
@@ -64,11 +68,15 @@ namespace lsd_slam
 	class MappingThread;
 	class ConstraintSearchThread;
 
+	struct IO;
+
 	using std::unique_ptr;
 	using std::shared_ptr;
 
 class SlamSystem {
-friend class IntegrationTest;
+
+	friend class IntegrationTest;
+
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -125,17 +133,10 @@ public:
 	Timer timeLastUpdate;
 
 	const Configuration &conf( void ) const     { return _conf; }
+	IO &io( void )  									{ return _io; }
+ 	//IO &io( void )  														{ return _io; }
 
-	//=== Debugging output functions =====
-	shared_ptr<Output3DWrapper> outputWrapper( void )      { return _outputWrapper; }
-	void set3DOutputWrapper( Output3DWrapper* outputWrapper ) {	_outputWrapper.reset(outputWrapper); }
-	void set3DOutputWrapper( const shared_ptr<Output3DWrapper> &outputWrapper) {	_outputWrapper = outputWrapper; }
-
-	void publishPose(const Sophus::Sim3f &pose ) 	                 { if( _outputWrapper ) _outputWrapper->publishPose(pose);}
-	void publishTrackedFrame( const Frame::SharedPtr &frame )      { if( _outputWrapper ) _outputWrapper->publishTrackedFrame( frame ); }
-	void publishKeyframeGraph( void )                              { if( _outputWrapper ) _outputWrapper->publishKeyframeGraph( keyFrameGraph() ); }
-	void publishKeyframe(  const Frame::SharedPtr &frame )         { if( _outputWrapper ) _outputWrapper->publishKeyframe( frame ); }
-	void publishDepthImage( unsigned char* data  )                 { if( _outputWrapper ) _outputWrapper->updateDepthImage( data ); }
+	void set3DOutputWrapper( const shared_ptr<Output3DWrapper> &outputWrapper);
 
 
 	void updateDisplayDepthMap();
@@ -179,6 +180,8 @@ private:
 	//===== Shared state =====
 
 	const Configuration &_conf;
+	struct IO _io;
+
 
 	std::shared_ptr<KeyFrameGraph> _keyFrameGraph;	  // has own locks
 
@@ -189,7 +192,6 @@ private:
 
 	std::shared_ptr<TrackableKeyFrameSearch> _trackableKeyFrameSearch;
 
-	shared_ptr<Output3DWrapper> _outputWrapper;	// no lock required
 
 	ThreadSynchronizer _finalized;
 

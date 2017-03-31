@@ -14,7 +14,7 @@ set(lsdslam_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/SlamSystem.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/DepthEstimation/DepthMap.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/DepthEstimation/DepthMapPixelHypothesis.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/util/Configuration.cpp  
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/Configuration.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/util/FileUtils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/util/globalFuncs.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/util/SophusUtil.cpp
@@ -35,6 +35,7 @@ set(lsdslam_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/SlamSystem/MappingThread.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/SlamSystem/TrackingThread.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/SlamSystem/ConstraintSearchThread.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/SlamSystem/IO.cpp
   ${GUI_SRCS}
 )
 

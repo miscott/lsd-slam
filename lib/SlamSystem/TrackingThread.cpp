@@ -240,8 +240,8 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 //  mostCurrentTrackedFrame->TrackingParent->getCamToWorld() * sim3FromSE3(mostCurrentTrackedFrame->thisToParent_SE3TrackingResult, 1.0);
 
 	LOG_IF( DEBUG,  enablePrintDebugInfo && printThreadingInfo ) << "Publishing tracked frame";
-	_system.publishTrackedFrame(newFrame);
-	_system.publishPose(newFrame->getCamToWorld().cast<float>());
+	_system.io().publishTrackedFrame(newFrame);
+	_system.io().publishPose(newFrame->getCamToWorld().cast<float>());
 
 	// Keyframe selection
 	// latestTrackedFrame = trackingNewFrame;

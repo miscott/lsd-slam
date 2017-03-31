@@ -66,7 +66,7 @@ int main( int argc, char** argv )
   std::shared_ptr<GUI> gui( new GUI( system->conf() ) );
 
   std::shared_ptr<lsd_slam::PangolinOutput3DWrapper> outputWrapper( new PangolinOutput3DWrapper( system->conf(), *gui ) );
-  system->set3DOutputWrapper( outputWrapper.get() );
+  system->set3DOutputWrapper( outputWrapper );
 
   std::shared_ptr<lsd_slam::PangolinOutputIOWrapper> ioWrapper( new PangolinOutputIOWrapper( system->conf(), *gui ) );
 

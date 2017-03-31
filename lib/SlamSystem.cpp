@@ -63,7 +63,7 @@ SlamSystem::SlamSystem( const Configuration &conf )
 : _finalized(),
 	perf(),
 	_conf( conf ),
-	_outputWrapper( nullptr ),
+	_io( *this ),
 	mappingTrackingReference( new TrackingReference() ),
 	_keyFrameGraph( new KeyFrameGraph( *this ) ),
 	keyframesAll(),
@@ -113,9 +113,16 @@ SlamSystem::~SlamSystem()
 SlamSystem *SlamSystem::fullReset( void )
 {
 	SlamSystem *newSystem = new SlamSystem( conf() );
-	newSystem->set3DOutputWrapper( outputWrapper() );
+	newSystem->set3DOutputWrapper( io().outputWrapper() );
 	return newSystem;
 }
+
+
+void SlamSystem::set3DOutputWrapper( const shared_ptr<Output3DWrapper> &outputWrapper)
+{
+	_io.set3DOutputWrapper( outputWrapper );
+}
+
 
 
 
@@ -196,7 +203,7 @@ void SlamSystem::initialize( const Frame::SharedPtr &frame )
 
 	currentKeyFrame().set( frame );
 
-	if( _conf.continuousPCOutput) publishKeyframe( frame );
+	if( _conf.continuousPCOutput) io().publishKeyframe( frame );
 
 	setInitialized( true );
 }
@@ -313,7 +320,7 @@ void SlamSystem::createNewCurrentKeyframe( const Frame::SharedPtr &newKeyframe )
 		}
 	}
 
-	publishKeyframe( newKeyframe );
+	io().publishKeyframe( newKeyframe );
 
 
 	// if(outputWrapper && printPropagationStatistics)
@@ -398,7 +405,7 @@ void SlamSystem::updateDisplayDepthMap()
 		printMessageOnCVImage(mapThread->map->debugImageDepth, buf1, buf2);
 
 	CHECK( mapThread->map->debugImageDepth.data != NULL );
-	publishDepthImage( mapThread->map->debugImageDepth.data );
+	io().publishDepthImage( mapThread->map->debugImageDepth.data );
 }
 
 
