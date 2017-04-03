@@ -1,6 +1,11 @@
 #pragma once
 
+#include <vector>
+#include <unordered_map>
 #include <memory>
+#include <mutex>
+
+#include "DataStructures/Frame.h"
 
 namespace lsd_slam {
 
@@ -20,8 +25,10 @@ namespace lsd_slam {
 
     void addKeyframe( const Frame::SharedPtr &frame);
 
-    void dropkeyframe( const Frame::SharedPtr &frame );
-    void dropCurrentKeyframe();
+    void dropKeyframe( const Frame::SharedPtr &frame );
+    //void dropCurrentKeyframe();
+
+    int size() const { return _keyframes.size(); }
 
     void addJustKeyframe( const Frame::SharedPtr &frame);
     void addJustIdToKeyframe( const Frame::SharedPtr &frame);

@@ -189,7 +189,7 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 
 
 	if(manualTrackingLossIndicated || _tracker->diverged ||
-		(_system.keyframesAll.const_ref().size() > INITIALIZATION_PHASE_COUNT &&
+		(_system.keyframes().size() > INITIALIZATION_PHASE_COUNT &&
 		 !_tracker->trackingWasGood))
 	{
 		LOGF(WARNING, "TRACKING LOST for frame %d (%1.2f%% good Points, which is %1.2f%% of available points; %s tracking; tracker has %s)!\n",
@@ -259,9 +259,9 @@ void TrackingThread::trackFrame(std::shared_ptr<Frame> newFrame, bool blockUntil
 	if( _system.currentKeyFrame().const_ref()->numMappedOnThisTotal > MIN_NUM_MAPPED)
 	{
 		Sophus::Vector3d dist = newRefToFrame_poseUpdate.translation() * _system.currentKeyFrame().const_ref()->meanIdepth;
-		float minVal = fmin(0.2f + _system.keyframesAll.const_ref().size() * 0.8f / INITIALIZATION_PHASE_COUNT,1.0f);
+		float minVal = fmin(0.2f + _system.keyframes().size() * 0.8f / INITIALIZATION_PHASE_COUNT,1.0f);
 
-		if(_system.keyframesAll.const_ref().size() < INITIALIZATION_PHASE_COUNT)	minVal *= 0.7;
+		if(_system.keyframes().size() < INITIALIZATION_PHASE_COUNT)	minVal *= 0.7;
 
 		auto d2 = dist.dot(dist);
 		lastTrackingClosenessScore = _system.trackableKeyFrameSearch()->getRefFrameScore(d2, _tracker->pointUsage);

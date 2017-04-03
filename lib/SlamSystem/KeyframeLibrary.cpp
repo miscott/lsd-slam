@@ -10,10 +10,12 @@ namespace lsd_slam {
   KeyframeLibrary::KeyframeLibrary()
     : _idToKeyFrame(),
      _idToKeyFrameMutex(),
-    _keyframesAll(),
+    _keyframes(),
      _keyframesMutex()
      {;}
 
+     KeyframeLibrary::~KeyframeLibrary()
+     {;}
 
 
 
@@ -25,29 +27,22 @@ namespace lsd_slam {
 
      void KeyframeLibrary::dropKeyframe( const Frame::SharedPtr &frame)
      {
-         LockGuard lock(_idToKeyFrameMutex;
-         _idToKeyFrame.erase(frame.id());
+         LockGuard lock(_idToKeyFrameMutex);
+         _idToKeyFrame.erase(frame->id());
      }
-
-     void KeyframeLibrary::dropCurrentKeyframe()
-     {
-       dropKeyframe( _system.currentKeyFrame() );
-     }
-
 
        // isolate these two functions so I can trace when one is used w/o the other
        void KeyframeLibrary::addJustIdToKeyframe( const Frame::SharedPtr &frame)
        {
-         lock_guard<mutex> guard(_idToKeyFrameMutex);
-         _idToKeyFrameMutex.insert( frame->id(), frame );
+         LockGuard guard(_idToKeyFrameMutex);
+         _idToKeyFrame.insert( std::make_pair(frame->id(), frame) );
        }
 
-       void KeyframeLibrary::addJustKeyframe( const Frame::SharedPtr &frame);
+       void KeyframeLibrary::addJustKeyframe( const Frame::SharedPtr &frame)
        {
-         lock_guard<mutex> guard( _keyframesMutex );
-         newKeyframe->idxInKeyframes = keyframesAll.const_ref().size();
+         LockGuard guard( _keyframesMutex );
+         frame->idxInKeyframes = _keyframes.size();
          _keyframes.push_back( frame );
        }
-     }
 
 }

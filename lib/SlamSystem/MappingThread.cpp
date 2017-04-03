@@ -385,7 +385,6 @@ void MappingThread::discardCurrentKeyframe()
 		return;
 	}
 
-
 	map->invalidate();
 
 	// TODO:   Why is it done this way?
@@ -398,7 +397,7 @@ void MappingThread::discardCurrentKeyframe()
 		}
 	}
 
-	_system.keyframe().dropCurrentKeyframe();
+	_system.keyframes().dropKeyframe( _system.currentKeyFrame().const_ref() );
 
 }
 

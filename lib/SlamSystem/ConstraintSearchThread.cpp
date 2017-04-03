@@ -86,10 +86,10 @@ int ConstraintSearchThread::callbackDoFullReConstraintTrack( void )
 	LOG(INFO) << "Optimizing Full Map!";
 
 	int added = 0;
-	for(unsigned int i=0;i<_system.keyframesAll.const_ref().size();i++)
+	for(unsigned int i=0;i<_system.keyframes().size();i++)
 	{
-		if(_system.keyframesAll.const_ref()[i]->pose->isInGraph)
-			added += findConstraintsForNewKeyFrames(_system.keyframesAll.ref()[i], false, false, 1.0);
+		if(_system.keyframes().at(i)->pose->isInGraph)
+			added += findConstraintsForNewKeyFrames( _system.keyframes().at(i), false, false, 1.0);
 	}
 
 	LOG(INFO) << "Done optimizing Full Map! Added " << added << " constraints.";
