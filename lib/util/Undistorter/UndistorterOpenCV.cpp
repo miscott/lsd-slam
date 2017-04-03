@@ -32,14 +32,14 @@ UndistorterOpenCV::UndistorterOpenCV(const char* configFileName)
   				) == 8 &&
 			std::sscanf(l2.c_str(), "%d %d", &in_width, &in_height) == 2)
 	{
-		printf("Input resolution: %d %d\n",in_width, in_height);
-		printf("In: %f %f %f %f %f %f %f %f\n",
+		LOGF(INFO,"Input resolution: %d %d",in_width, in_height);
+		LOGF(INFO,"In: %f %f %f %f %f %f %f %f",
 				inputCalibration[0], inputCalibration[1], inputCalibration[2], inputCalibration[3], inputCalibration[4],
 				inputCalibration[5], inputCalibration[6], inputCalibration[7]);
 	}
 	else
 	{
-		printf("Failed to read camera calibration (invalid format?)\nCalibration file: %s\n", configFileName);
+		LOGF(FATAL,"Failed to read camera calibration (invalid format?)\nCalibration file: %s\n", configFileName);
 		valid = false;
 	}
 
@@ -47,32 +47,32 @@ UndistorterOpenCV::UndistorterOpenCV(const char* configFileName)
 	if(l3 == "crop")
 	{
 		outputCalibration = -1;
-		printf("Out: Crop\n");
+		LOGF(WARNING,"Out: Crop");
 	}
 	else if(l3 == "full")
 	{
 		outputCalibration = -2;
-		printf("Out: Full\n");
+		LOGF(WARNING,"Out: Full");
 	}
 	else if(l3 == "none")
 	{
-		printf("NO RECTIFICATION\n");
+		LOGF(WARNING,"NO RECTIFICATION");
 		valid = false;
 	}
 	else
 	{
-		printf("Out: Failed to Read Output pars... not rectifying.\n");
+		LOGF(WARNING,"Out: Failed to Read Output pars... not rectifying.");
 		valid = false;
 	}
 
 	// l4
 	if(std::sscanf(l4.c_str(), "%d %d", &out_width, &out_height) == 2)
 	{
-		printf("Output resolution: %d %d\n", out_width, out_height);
+		LOGF(INFO, "Output resolution: %d %d", out_width, out_height);
 	}
 	else
 	{
-		printf("Out: Failed to Read Output resolution... not rectifying.\n");
+		LOGF(FATAL,"Out: Failed to Read Output resolution... not rectifying.");
 		valid = false;
 	}
 
@@ -82,15 +82,15 @@ UndistorterOpenCV::UndistorterOpenCV(const char* configFileName)
 
 	if(inputCalibration[2] < 1.0f)
 	{
-		printf("WARNING: cx = %f < 1, which should not be the case for normal cameras.!\n", inputCalibration[2]);
-		printf("Possibly this is due to a recent change in the calibration file format, please see the README.md.\n");
+		LOGF(WARNING,"WARNING: cx = %f < 1, which should not be the case for normal cameras.!", inputCalibration[2]);
+		LOGF(WARNING,"Possibly this is due to a recent change in the calibration file format, please see the README.md.");
 
 		inputCalibration[0] *= in_width;
 		inputCalibration[2] *= in_width;
 		inputCalibration[1] *= in_height;
 		inputCalibration[3] *= in_height;
 
-		printf("auto-changing calibration file to fx=%f, fy=%f, cx=%f, cy=%f\n",
+		LOGF(INFO,"auto-changing calibration file to fx=%f, fy=%f, cx=%f, cy=%f",
 			inputCalibration[0],
 			inputCalibration[1],
 			inputCalibration[2],

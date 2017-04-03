@@ -58,6 +58,8 @@ int main( int argc, char** argv )
 
   LOG(INFO) << "Slam image: " << conf.slamImage.width << " x " << conf.slamImage.height;
 
+  LOG(INFO) << "Camera K: " <<  conf.camera.K;
+
   CHECK( (conf.camera.fx) > 0 && (conf.camera.fy > 0) ) << "Camera focal length is zero";
 
   std::shared_ptr<SlamSystem> system( new SlamSystem(conf) );
