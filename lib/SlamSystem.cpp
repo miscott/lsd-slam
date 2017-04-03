@@ -66,8 +66,7 @@ SlamSystem::SlamSystem( const Configuration &conf )
 	_io( *this ),
 	mappingTrackingReference( new TrackingReference() ),
 	_keyFrameGraph( new KeyFrameGraph( *this ) ),
-	keyframesAll(),
-	idToKeyFrame(),
+	_keyframes(),
 	_currentKeyFrame( nullptr ),
 	allFramePoses(),
 	_trackableKeyFrameSearch( new TrackableKeyFrameSearch( *this, _keyFrameGraph, conf ) ),
@@ -197,8 +196,7 @@ void SlamSystem::initialize( const Frame::SharedPtr &frame )
 	keyFrameGraph()->addKeyFrame( frame );
 
 	if( conf().SLAMEnabled ) {
-		IdToKeyFrame::LockGuard lock( idToKeyFrame.mutex() );
-		idToKeyFrame.ref().insert(std::make_pair( frame->id(), frame ));
+		_keyframes.addJustIdToKeyframe( frame );
 	}
 
 	currentKeyFrame().set( frame );
@@ -292,8 +290,7 @@ void SlamSystem::createNewCurrentKeyframe( const Frame::SharedPtr &newKeyframe )
 	LOG_IF(INFO, printThreadingInfo) << "CREATE NEW KF " << newKeyframe->id() << ", replacing " << currentKeyFrame()()->id();
 
 	if( conf().SLAMEnabled ) {
-		MutexObject< std::unordered_map< int, Frame::SharedPtr > >::LockGuard lock( idToKeyFrame.mutex() );
-		idToKeyFrame.ref().insert(std::make_pair( newKeyframe->id(), newKeyframe ));
+		_keyframes.addJustIdToKeyframe( newKeyframe );
 	}
 
 	mapThread->newKeyframe( newKeyframe, true );
@@ -308,10 +305,8 @@ void SlamSystem::createNewCurrentKeyframe( const Frame::SharedPtr &newKeyframe )
 
 		if(newKeyframe->idxInKeyframes < 0)
 		{
-			KeyframesAll::LockGuard guard( keyframesAll.mutex() );
-			//keyFrameGraph()->keyframesAllMutex.lock();
-			newKeyframe->idxInKeyframes = keyframesAll.const_ref().size();
-			keyframesAll.ref().push_back(newKeyframe );
+			_keyframes.addJustKeyframe( newKeyframe );
+
 			keyFrameGraph()->totalPoints += newKeyframe->numPoints;
 			keyFrameGraph()->totalVertices ++;
 			//keyFrameGraph()->keyframesAllMutex.unlock();

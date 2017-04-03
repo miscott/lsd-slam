@@ -172,7 +172,7 @@ void MappingThread::callbackMapTrackedFrame( Frame::SharedPtr frame )
 		//TODO:   change what's passed to relocalizer..
 		// start relocalizer if it isnt running already
 		if(!relocalizer.isRunning)
-			relocalizer.start(_system.keyframesAll.ref());
+			relocalizer.start(_system.keyframes());
 
 		// did we find a frame to relocalize with?
 		if(relocalizer.waitResult(50)) {
@@ -199,12 +199,15 @@ void MappingThread::callbackMergeOptimizationOffset()
 	bool didUpdate = false;
 
 	// if(_optThread->haveUnmergedOptimizationOffset())
+
 	{
 		boost::shared_lock_guard< boost::shared_mutex > pose_lock(_system.poseConsistencyMutex);
-		SlamSystem::KeyframesAll::LockGuard kfLock( _system.keyframesAll.mutex() );
+		KeyframeLibrary::LockGuard kfLock( _system.keyframes().mutex() );
 
-		for(unsigned int i=0;i<_system.keyframesAll.const_ref().size(); i++)
-			_system.keyframesAll.ref()[i]->pose->applyPoseGraphOptResult();
+		// TODO.  Why  the hell is it written like this?
+		for( auto keyframe : _system.keyframes() ) {
+			keyframe->pose->applyPoseGraphOptResult();
+		}
 
 		// _optThread->clearUnmergedOptimizationOffset();
 
@@ -341,11 +344,7 @@ bool MappingThread::updateKeyframe( const Frame::SharedPtr &frame )
 	// 	outputWrapper->publishDebugInfo(data);
 	// }
 
-
-
-	// TODO: Why is this here?
-	if( _system.conf().continuousPCOutput && (bool)_system.currentKeyFrame()() )
-			_system.io().publishKeyframe( _system.currentKeyFrame().const_ref() );
+	_system.io().publishCurrentKeyframe();
 
 	return true;
 }
@@ -389,6 +388,7 @@ void MappingThread::discardCurrentKeyframe()
 
 	map->invalidate();
 
+	// TODO:   Why is it done this way?
 	{
 		SlamSystem::AllFramePoses::LockGuard lock( _system.allFramePoses.mutex() );
 		for(auto p : _system.allFramePoses.ref())
@@ -398,10 +398,7 @@ void MappingThread::discardCurrentKeyframe()
 		}
 	}
 
-	{
-		SlamSystem::IdToKeyFrame::LockGuard lock(_system.idToKeyFrame.mutex());
-		_system.idToKeyFrame.get().erase(_system.currentKeyFrame().const_ref()->id());
-	}
+	_system.keyframe().dropCurrentKeyframe();
 
 }
 

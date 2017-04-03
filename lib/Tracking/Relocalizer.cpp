@@ -95,14 +95,14 @@ void Relocalizer::updateCurrentFrame(std::shared_ptr<Frame> currentFrame)
 	// handleKey(pressedKey);
 }
 
-void Relocalizer::start(std::vector<Frame::SharedPtr> &allKeyframesList)
+void Relocalizer::start(KeyframeLibrary &keyframeLibrary )
 {
 	// make KFForReloc List
 	KFForReloc.clear();
-	for(unsigned int k=0;k < allKeyframesList.size(); k++)
+	for(auto kf : keyframeLibrary )
 	{
 		// insert
-		KFForReloc.push_back(allKeyframesList[k]);
+		KFForReloc.push_back(kf);
 
 		// swap with a random element
 		int ridx = rand()%(KFForReloc.size());

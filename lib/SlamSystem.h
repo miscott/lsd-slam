@@ -45,6 +45,7 @@ $ See also <https://www.github.com/amarburg/lsd_slam/>
 #include "Tracking/Relocalizer.h"
 
 #include "SlamSystem/IO.h"
+#include "SlamSystem/KeyframeLibrary.h"
 
 
 namespace lsd_slam
@@ -151,16 +152,10 @@ public:
 	// locked exclusively during the pose-update by Mapping.
 	boost::shared_mutex poseConsistencyMutex;
 
+	KeyframeLibrary &keyframes() { return _keyframes; }
 
 	shared_ptr<KeyFrameGraph> &keyFrameGraph() { return _keyFrameGraph; };	  // has own locks
 	shared_ptr<TrackableKeyFrameSearch> &trackableKeyFrameSearch() { return _trackableKeyFrameSearch; }
-
-	// TODO.   Move back to private
-	// contains ALL keyframes, as soon as they are "finished".
-	// does NOT yet contain the keyframe that is currently being created.
-	//boost::shared_mutex keyframesAllMutex;
-	typedef MutexObject< std::vector< Frame::SharedPtr > > KeyframesAll;
-	MutexObject< std::vector< Frame::SharedPtr > > keyframesAll;
 
 	// contains ALL frame poses, chronologically, as soon as they are tracked.
 	// the corresponding frame may have been removed / deleted in the meantime.
@@ -168,12 +163,6 @@ public:
 	//boost::shared_mutex allFramePosesMutex;
 	typedef MutexObject< std::vector< FramePoseStruct::SharedPtr> > AllFramePoses;
 	AllFramePoses allFramePoses;
-
-	/** Maps frame ids to keyframes. Contains ALL Keyframes allocated, including the one that currently being created. */
-	/* this is where the shared pointers of Keyframe Frames are kept, so they are not deleted ever */
-	//boost::shared_mutex idToKeyFrameMutex;
-	typedef MutexObject< std::unordered_map< int, Frame::SharedPtr > > IdToKeyFrame;
-	MutexObject< std::unordered_map< int, Frame::SharedPtr > > idToKeyFrame;
 
 private:
 
@@ -185,13 +174,13 @@ private:
 
 	std::shared_ptr<KeyFrameGraph> _keyFrameGraph;	  // has own locks
 
-
 	MutexObject< Frame::SharedPtr >  _currentKeyFrame;
 
 	TrackingReference* mappingTrackingReference;
 
 	std::shared_ptr<TrackableKeyFrameSearch> _trackableKeyFrameSearch;
 
+	KeyframeLibrary _keyframes;
 
 	ThreadSynchronizer _finalized;
 

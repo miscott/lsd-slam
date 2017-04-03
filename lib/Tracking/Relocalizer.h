@@ -28,6 +28,8 @@
 
 #include "DataStructures/Frame.h"
 
+#include "SlamSystem/KeyframeLibrary.h"
+
 
 namespace lsd_slam
 {
@@ -53,7 +55,7 @@ public:
 	~Relocalizer();
 
 	void updateCurrentFrame(std::shared_ptr<Frame> currentFrame);
-	void start(std::vector< Frame::SharedPtr > &allKeyframesList);
+	void start( KeyframeLibrary &keyframeLibrary );
 	void stop();
 
 	bool waitResult(int milliseconds);

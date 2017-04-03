@@ -79,20 +79,21 @@ bool OptimizationThread::optimizationIteration(int itsPerTry, float minChange)
 	{
 	// save the optimization result.
 	_system.poseConsistencyMutex.lock_shared();
-	SlamSystem::KeyframesAll::LockGuard lock(_system.keyframesAll.mutex());
+	KeyframeLibrary::LockGuard lock(_system.keyframes().mutex());
 
 
-	for(size_t i=0;i<_system.keyframesAll.const_ref().size(); i++)
+	//for(size_t i=0;i<_system.keyframesAll.const_ref().size(); i++)
+	for( auto keyframe : _system.keyframes() )
 	{
 		// set edge error sum to zero
-		_system.keyframesAll.ref()[i]->edgeErrorSum = 0;
-		_system.keyframesAll.ref()[i]->edgesNum = 0;
+		keyframe->edgeErrorSum = 0;
+		keyframe->edgesNum = 0;
 
-		if(!_system.keyframesAll.const_ref()[i]->pose->isInGraph) continue;
+		if(!keyframe->pose->isInGraph) continue;
 
 		// get change from last optimization
-		Sim3 a = _system.keyframesAll.ref()[i]->pose->graphVertex->estimate();
-		Sim3 b = _system.keyframesAll.ref()[i]->getCamToWorld();
+		Sim3 a = keyframe->pose->graphVertex->estimate();
+		Sim3 b = keyframe->getCamToWorld();
 		Sophus::Vector7f diff = (a*b.inverse()).log().cast<float>();
 
 
@@ -105,14 +106,14 @@ bool OptimizationThread::optimizationIteration(int itsPerTry, float minChange)
 		sum +=7;
 
 		// set change
-		_system.keyframesAll.ref()[i]->pose->setPoseGraphOptResult(
-		_system.keyframesAll.ref()[i]->pose->graphVertex->estimate());
+		keyframe->pose->setPoseGraphOptResult(
+		keyframe->pose->graphVertex->estimate());
 
 		// add error
-		for(auto edge : _system.keyframesAll.ref()[i]->pose->graphVertex->edges())
+		for(auto edge : keyframe->pose->graphVertex->edges())
 		{
-			_system.keyframesAll.ref()[i]->edgeErrorSum += ((EdgeSim3*)(edge))->chi2();
-			_system.keyframesAll.ref()[i]->edgesNum++;
+			keyframe->edgeErrorSum += ((EdgeSim3*)(edge))->chi2();
+			keyframe->edgesNum++;
 		}
 	}
 

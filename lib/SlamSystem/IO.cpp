@@ -38,4 +38,12 @@ namespace lsd_slam {
     if( _outputWrapper ) _outputWrapper->updateDepthImage( data );
   }
 
+void IO::publishCurrentKeyframe()
+{
+  // TODO: Why is this here?
+  if( _system.conf().continuousPCOutput && (bool)_system.currentKeyFrame()() )
+      publishKeyframe( _system.currentKeyFrame().const_ref() );
+  }
+}
+
 }

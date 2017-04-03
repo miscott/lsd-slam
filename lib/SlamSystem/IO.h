@@ -29,6 +29,8 @@ namespace lsd_slam {
     void publishKeyframe(  const Frame::SharedPtr &frame ) ;
     void publishDepthImage( unsigned char* data  );
 
+    void publishCurrentKeyframe();
+
   private:
     shared_ptr<Output3DWrapper> _outputWrapper;	// no lock required
 
