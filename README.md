@@ -2,7 +2,7 @@
 
 [![wercker status](https://app.wercker.com/status/4c30e195acc92af03c75e1f3451b6916/m/master "wercker status")](https://app.wercker.com/project/byKey/4c30e195acc92af03c75e1f3451b6916)
 
-See my [Development Blog](https://faculty.washington.edu/amarburg/press/category/lsdslam/) for current status.
+See my [Development Blog](http://staff.washington.edu/amarburg/site/) for current status.
 
 > __November/December 2016__ After early development, I'm trying to _reduce_ the number of external dependencies (introduced by myself or previous authors).   At a macro-scale I'm  experimenting with the [Conan](https://conan.io/) package manager.  However, building this repo __does not__ require Conan (though it can also be built with conan)
 
@@ -29,7 +29,7 @@ This repo contains my experiments with LSD-SLAM, for performance, functionality
 and structure.   As of November 2016, it diverges significantly from either Jakob
 or Thomas's branches in structure (I refactored as a way of learning the code),
 but not significantly in terms of functionality (except for all the ways in which
-I've broken it in the refactoring).   
+I've broken it in the refactoring).
 
 **master**  is my working / stable-ish branch.   **aaron_dev** is my **really unstable** branch.   **Please note: BOTH BRANCHES ARE MOVING TARGETS.**  it's just that **aaron_dev** is, uh, moving faster.
 
@@ -100,10 +100,10 @@ first run `rake docker:image` which is create a local copy of the development Do
 image.
 
 Then `rake docker:debug:build` or `rake docker:release:build` which will build the
-release in a Docker container up through testing.  
+release in a Docker container up through testing.
 
 This build process will mount and build the current source tree in its own `build_docker-*` tree,
-which is not ephemeral.  
+which is not ephemeral.
 
 For now the Docker process is focused on building and testing, not actually running in the Docker image.  Soon enough...
 
