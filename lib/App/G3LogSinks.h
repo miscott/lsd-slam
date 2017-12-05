@@ -1,5 +1,7 @@
 
 
+#include <iostream>
+
 #pragma once
 
 struct ColorStderrSink {
