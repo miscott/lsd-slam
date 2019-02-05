@@ -1,117 +1,201 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(lsd_slam)
 
-## Error message if not run in fips
-if (NOT FIPS_CONFIG)
-  message(FATAL_ERROR "As of December 2017, I'm using \"fips\" as a package manager.   The \"cmake\" branch contains the working head for the cmake-based build.  See README.md for more information.")
-endif()
+## Compile as C++11, supported in ROS Kinetic and newer
+# add_compile_options(-std=c++11)
 
-if (NOT FIPS_IMPORT)
-  cmake_minimum_required(VERSION 3.5.0)
+## Find catkin macros and libraries
+## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+## is used, also find other catkin packages
+find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  nav_msgs
+  roscpp
+  rospy
+  std_msgs
+)
 
-  get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)
-  include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
-
-  fips_setup(PROJECT lsd_slam)
-endif()
-
-option(BUILD_GUI "Build Pangolin-based GUI" OFF)
-
-# ## Non-conan / cmake-based build
-# set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
-# set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-#
-# include( ${PROJECT_SOURCE_DIR}/cmake/BuildG3Log.cmake )
-# set( EXTERNAL_PROJECTS g3log )
-#
-# include( ${PROJECT_SOURCE_DIR}/cmake/BuildLibActiveObject.cmake )
-# list( APPEND EXTERNAL_PROJECTS libactive_object )
-
-#option( USE_OPENMP "Enable OpenMP (currently only in local copy of G2O)" OFF )
-
-find_package(Boost COMPONENTS thread filesystem system REQUIRED)
-find_package(Eigen3 REQUIRED)
-
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
-## I believe the fipsified version of g2o will handle this...
-# ## I haven't packaged suitesparse yet...
-find_package(SuiteParse REQUIRED)
-find_package( TinyXML2 REQUIRED )
-
-# FabMap
-# uncomment this part to enable fabmap
-#add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/openFabMap)
-#include_directories(${PROJECT_SOURCE_DIR}/thirdparty/openFabMap/include)
-#add_definitions("-DHAVE_FABMAP")
-#set(FABMAP_LIB openFABMAP )
+## System dependencies are found with CMake's conventions
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
-##==== Check and define the architecture
-## Architecture-specific optimizations
-option( CUDA_VERSION "Use CUDA" "")
+## Uncomment this if the package has a setup.py. This macro ensures
+## modules and global scripts declared therein get installed
+## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
+# catkin_python_setup()
 
-EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE )
-message( STATUS "Architecture: ${ARCHITECTURE}" )
-if( ${ARCHITECTURE} STREQUAL "aarch64" )
-	## For compilation on Jetson TX1
-	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a") # -DENABLE_NEON" )
+################################################
+## Declare ROS messages, services and actions ##
+################################################
 
-elseif( ${ARCHITECTURE} STREQUAL "x86_64" )
-  if( ${CMAKE_BUILD_TYPE} MATCHES RELEASE )
-    # -DENABLE_SSE enables Jakob's original SSE optimizations in his code,
-  	# it has nothing to do with compiler behavior
-    message( STATUS " --> Using SSE" )
-    ## Enable SSE on release only...
-    set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -msse4.1 -msse3 -msse2 -msse -march=native -DENABLE_SSE" )
-  else()
-    message( STATUS " --> Not enabling SSE on x86_64 architecture for Debug build")
-  endif()
-endif()
+## To declare and build messages, services or actions from within this
+## package, follow these steps:
+## * Let MSG_DEP_SET be the set of packages whose message types you use in
+##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
+## * In the file package.xml:
+##   * add a build_depend tag for "message_generation"
+##   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
+##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
+##     but can be declared for certainty nonetheless:
+##     * add a exec_depend tag for "message_runtime"
+## * In this file (CMakeLists.txt):
+##   * add "message_generation" and every package in MSG_DEP_SET to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * add "message_runtime" and every package in MSG_DEP_SET to
+##     catkin_package(CATKIN_DEPENDS ...)
+##   * uncomment the add_*_files sections below as needed
+##     and list every .msg/.srv/.action file to be processed
+##   * uncomment the generate_messages entry below
+##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-set( OPENCV_COMPONENTS core highgui imgproc video calib3d )
-find_package(OpenCV COMPONENTS ${OPENCV_COMPONENTS} REQUIRED)
+## Generate messages in the 'msg' folder
+# add_message_files(
+#   FILES
+#   Message1.msg
+#   Message2.msg
+# )
 
-if( OpenCV_VERSION_MAJOR EQUAL "3" )
-  message( STATUS "Using OpenCV 3.x")
-  add_definitions( -DOPENCV3 )
-else()
-  message( STATUS "Using OpenCV 2.x")
-  add_definitions( -DOPENCV2 )
-endif()
+## Generate services in the 'srv' folder
+# add_service_files(
+#   FILES
+#   Service1.srv
+#   Service2.srv
+# )
 
-if( CUDA_VERSION )
-	find_package( CUDA REQUIRED ${CUDA_VERSION} )
-  SET( CUDA_USE_STATIC_CUDA_RUNTIME OFF )
-endif()
+## Generate actions in the 'action' folder
+# add_action_files(
+#   FILES
+#   Action1.action
+#   Action2.action
+# )
 
-## C++ flags applied to all builds
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+## Generate added messages and services with any dependencies listed here
+# generate_messages(
+#   DEPENDENCIES
+#   geometry_msgs#   nav_msgs#   std_msgs
+# )
 
-set( LSDSLAM_INCLUDE_DIRS
-	${CMAKE_SOURCE_DIR}/lib
-	${CMAKE_SOURCE_DIR}/lib/lsd_core
-	${EIGEN3_INCLUDE_DIR}
-	${OpenCV_INCLUDE_DIRS}
-	${Boost_INCLUDE_DIR}
-	${Pangolin_INCLUDE_DIRS}
-  ${CSPARSE_INCLUDE_DIR}
-	${PROJECT_SOURCE_DIR}/thirdparty/Sophus )
+################################################
+## Declare ROS dynamic reconfigure parameters ##
+################################################
 
-if(APPLE)
-	set( CMAKE_MACOSX_RPATH OFF )
-endif()
+## To declare and build dynamic reconfigure parameters within this
+## package, follow these steps:
+## * In the file package.xml:
+##   * add a build_depend and a exec_depend tag for "dynamic_reconfigure"
+## * In this file (CMakeLists.txt):
+##   * add "dynamic_reconfigure" to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * uncomment the "generate_dynamic_reconfigure_options" section below
+##     and list every .cfg file to be processed
 
-fips_include_directories( ${LSDSLAM_INCLUDE_DIRS} )
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+# generate_dynamic_reconfigure_options(
+#   cfg/DynReconf1.cfg
+#   cfg/DynReconf2.cfg
+# )
 
-fips_add_subdirectory( lib/ )
+###################################
+## catkin specific configuration ##
+###################################
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if your package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES lsd_slam
+#  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs
+#  DEPENDS system_lib
+)
 
-if( NOT FIPS_IMPORT )
-  fips_add_subdirectory( tools/ )
+###########
+## Build ##
+###########
 
-  if( FIPS_UNITTESTS )
-    ## Build a local copy of gtest (as per the GTest FAQ)
-    fips_add_subdirectory( test/unit/ )
-  endif()
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
+include_directories(
+# include
+  ${catkin_INCLUDE_DIRS}
+)
 
-  fips_finish()
-endif()
+## Declare a C++ library
+# add_library(${PROJECT_NAME}
+#   src/${PROJECT_NAME}/lsd_slam.cpp
+# )
+
+## Add cmake target dependencies of the library
+## as an example, code may need to be generated before libraries
+## either from message generation or dynamic reconfigure
+# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+## Declare a C++ executable
+## With catkin_make all packages are built within a single CMake context
+## The recommended prefix ensures that target names across packages don't collide
+# add_executable(${PROJECT_NAME}_node src/lsd_slam_node.cpp)
+
+## Rename C++ executable without prefix
+## The above recommended prefix causes long target names, the following renames the
+## target back to the shorter version for ease of user use
+## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
+# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
+
+## Add cmake target dependencies of the executable
+## same as for the library above
+# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+## Specify libraries to link a library or executable target against
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+# )
+
+#############
+## Install ##
+#############
+
+# all install targets should use catkin DESTINATION variables
+# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
+
+## Mark executable scripts (Python etc.) for installation
+## in contrast to setup.py, you can choose the destination
+# install(PROGRAMS
+#   scripts/my_python_script
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
+
+## Mark executables and/or libraries for installation
+# install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
+
+## Mark cpp header files for installation
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#   FILES_MATCHING PATTERN "*.h"
+#   PATTERN ".svn" EXCLUDE
+# )
+
+## Mark other files for installation (e.g. launch and bag files, etc.)
+# install(FILES
+#   # myfile1
+#   # myfile2
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
+
+#############
+## Testing ##
+#############
+
+## Add gtest based cpp test target and link libraries
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lsd_slam.cpp)
+# if(TARGET ${PROJECT_NAME}-test)
+#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+# endif()
+
+## Add folders to be run by python nosetests
+# catkin_add_nosetests(test)
