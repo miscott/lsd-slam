@@ -30,6 +30,9 @@ namespace lsd_slam {
     ThreadMutexObject<bool> inputDone;
     ThreadSynchronizer inputReady;
 
+  private:
+    
+
   protected:
     std::shared_ptr<lsd_slam::OutputIOWrapper> output;
 
