@@ -26,6 +26,8 @@
 
 #include <boost/thread.hpp>
 
+#include "ros/ros.h"
+
 #include "libg3logger/g3logger.h"
 
 #include "SlamSystem.h"
@@ -50,8 +52,8 @@ int main( int argc, char** argv )
   logWorker.logBanner();
 
   Configuration conf;
-  ParseArgs args( argc, argv );
-
+  //ParseArgs args( argc, argv );
+  /*
   // Load the configuration object
   conf.inputImage = args.undistorter->inputImageSize();
   conf.slamImage  = args.undistorter->outputImageSize();
@@ -78,6 +80,12 @@ int main( int argc, char** argv )
 
   LOG(INFO) << "Finalizing system.";
   system->finalize();
+  */
+  ros::Rate loop_rate(10);
+  while (ros::ok()){
 
+    LOG(INFO) << "I'm working!";
+    loop_rate.sleep();
+  }
   return 0;
 }
