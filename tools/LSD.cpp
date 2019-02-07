@@ -26,6 +26,8 @@
 
 #include <boost/thread.hpp>
 
+#include "ros/ros.h"
+
 #include "libg3logger/g3logger.h"
 
 #include "SlamSystem.h"
@@ -48,6 +50,9 @@ int main( int argc, char** argv )
 {
   libg3logger::G3Logger logWorker( argv[0] );
   logWorker.logBanner();
+  ros::init(argc, argv, "lsd_slam_core");
+  ros::NodeHandle nh;
+
   /*
   Configuration conf;
   ParseArgs args( argc, argv );
@@ -71,13 +76,18 @@ int main( int argc, char** argv )
   // Wait for all threads to be ready.
   LOG(INFO) << "Starting all threads.";
   startAll.notify();
-
-  // This is idle while(1) loop
-  while( !input.inputDone.getValue() )
-  { sleep(1); }
-
-  LOG(INFO) << "Finalizing system.";
-  system->finalize();
   */
+  // This is idle while(1) loop
+
+  //while( !input.inputDone.getValue() )
+  ros::Rate loop_rate(10); //Run at 10Hz
+  while (ros::ok()){
+    ROS_INFO("I'm Working!");
+    loop_rate.sleep();
+  }
+
+  //LOG(INFO) << "Finalizing system.";
+  //system->finalize();
+
   return 0;
 }
