@@ -48,7 +48,7 @@ int main( int argc, char** argv )
 {
   libg3logger::G3Logger logWorker( argv[0] );
   logWorker.logBanner();
-
+  /*
   Configuration conf;
   ParseArgs args( argc, argv );
 
@@ -78,6 +78,6 @@ int main( int argc, char** argv )
 
   LOG(INFO) << "Finalizing system.";
   system->finalize();
-
+  */
   return 0;
 }
