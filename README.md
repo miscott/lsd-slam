@@ -2,7 +2,6 @@
 
 See my [Development Blog](http://staff.washington.edu/amarburg/site/) for current status.
 
-<<<<<<< HEAD
 > __December 2017__   Not as much time as I would like to work on this
 over the last year (clearly).   One thing I've discovered is I'm not a huge
 fan of Conan.   I ended up making a lot of infrastructure to get what I
@@ -10,7 +9,6 @@ wanted out of it --- which was the ability to define dependencies and
 have them all built locally.
 =======
 See my [Development Blog](http://staff.washington.edu/amarburg/site/) for current status.
->>>>>>> 64f439a15ad1d41fee21dffdf5a96f8605bf30e6
 
 > So if you've got here, I've thrown out Conan and moved to
 [fips](http://floooh.github.io/fips/index.html).   fips ain't perfect, but it
@@ -82,7 +80,6 @@ any dataset from [here](http://vision.in.tum.de/lsdslam), and run:
 
 I've started to document my performance testing in [doc/Performance.md](doc/Performance.md)
 
-<<<<<<< HEAD
 # Related Papers
 =======
 # Docker
@@ -101,7 +98,6 @@ which is not ephemeral.
 For now the Docker process is focused on building and testing, not actually running in the Docker image.  Soon enough...
 
 # 5. Related Papers
->>>>>>> 64f439a15ad1d41fee21dffdf5a96f8605bf30e6
 
 * **LSD-SLAM: Large-Scale Direct Monocular SLAM**, *J. Engel, T. Schöps, D. Cremers*, ECCV '14
 
